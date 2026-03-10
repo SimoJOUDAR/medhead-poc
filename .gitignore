@@ -1,0 +1,35 @@
+# Build output
+backend/target/
+frontend/build/
+frontend/dist/
+frontend/node_modules/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# OSRM map data (large files, downloaded locally)
+osrm-data/*.osm.pbf
+osrm-data/*.osrm
+osrm-data/*.osrm.*
+
+# Docker volumes
+postgres-data/
+
+# Test output
+backend/target/surefire-reports/
+backend/target/failsafe-reports/
+
+# Logs
+*.log

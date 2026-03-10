@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: medhead-poc
+  security:
+    user:
+      name: mjoudar
+      password: mjoudar
