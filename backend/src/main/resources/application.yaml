@@ -1,7 +1,9 @@
 spring:
   application:
     name: medhead-poc
-  security:
-    user:
-      name: mjoudar
-      password: mjoudar
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
