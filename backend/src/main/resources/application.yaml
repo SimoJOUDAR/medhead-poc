@@ -7,3 +7,15 @@ management:
     web:
       exposure:
         include: health
+
+app:
+  security:
+    jwt:
+      # HS256 requires a secret of at least 256 bits (32 bytes).
+      # Override via APP_SECURITY_JWT_SECRET in any non-dev environment.
+      secret: ${APP_SECURITY_JWT_SECRET:dev-only-hs256-secret-do-not-use-outside-local-development-environments}
+      ttl-minutes: ${APP_SECURITY_JWT_TTL_MINUTES:60}
+    users:
+      - username: demo
+        # BCrypt hash of "demo"; overridable via APP_SECURITY_USERS_0_PASSWORD.
+        password: "{bcrypt}$2a$10$FIE00mLeUHb3Xd00r/uZ6e/dq7qALrYTZWb1TCluY3uqgWW.8LLWC"

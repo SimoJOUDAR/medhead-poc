@@ -36,6 +36,26 @@
 
 <!-- To be completed in session S2 -->
 
+### Local dev credentials
+
+The backend ships a single pre-seeded user for local development and demo purposes:
+
+| Username | Password |
+|----------|----------|
+| `demo`   | `demo`   |
+
+Exchange them for a JWT via `POST /api/v1/auth/login`:
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"demo","password":"demo"}'
+```
+
+The response payload includes a `token` field; send it as `Authorization: Bearer <token>` on every subsequent `/api/v1/**` call. Tokens are HS256-signed and expire after 60 minutes by default.
+
+Production deployments must override the signing secret and user store via environment variables (`APP_SECURITY_JWT_SECRET`, `APP_SECURITY_USERS_0_PASSWORD`, `APP_SECURITY_JWT_TTL_MINUTES`). The default secret shipped in `application.yaml` is flagged as dev-only and must not leave a developer machine.
+
 ## Running the Tests
 
 <!-- To be completed in session S4 -->
