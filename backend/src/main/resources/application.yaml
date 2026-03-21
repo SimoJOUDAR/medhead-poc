@@ -1,6 +1,23 @@
 spring:
   application:
     name: medhead-poc
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/medhead}
+    username: ${SPRING_DATASOURCE_USERNAME:medhead}
+    password: ${SPRING_DATASOURCE_PASSWORD:medhead}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  sql:
+    init:
+      mode: always
+      platform: postgresql
 
 management:
   endpoints:
