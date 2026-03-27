@@ -24,4 +24,11 @@ public class JpaHospitalSpecialtyRepository implements HospitalSpecialtyReposito
                 .map(mapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<HospitalSpecialty> findWithAvailableBedsForSpecialty(Long specialtyId) {
+        return delegate.findBySpecialtyIdAndAvailableBedsGreaterThan(specialtyId, 0).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
 }
