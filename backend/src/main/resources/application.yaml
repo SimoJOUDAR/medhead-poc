@@ -36,3 +36,7 @@ app:
       - username: demo
         # BCrypt hash of "demo"; overridable via APP_SECURITY_USERS_0_PASSWORD.
         password: "{bcrypt}$2a$10$FIE00mLeUHb3Xd00r/uZ6e/dq7qALrYTZWb1TCluY3uqgWW.8LLWC"
+  osrm:
+    host: ${APP_OSRM_HOST:localhost}
+    port: ${APP_OSRM_PORT:5000}
+    read-timeout-ms: ${APP_OSRM_READ_TIMEOUT_MS:2000}

@@ -9,4 +9,11 @@ import java.util.List;
 public interface HospitalSpecialtyRepository {
 
     List<HospitalSpecialty> findAll();
+
+    /**
+     * Returns the rows linking the given specialty to hospitals that still
+     * have at least one free bed. Backed by the partial index on
+     * {@code hospital_specialties(specialty_id) WHERE available_beds > 0}.
+     */
+    List<HospitalSpecialty> findWithAvailableBedsForSpecialty(Long specialtyId);
 }
