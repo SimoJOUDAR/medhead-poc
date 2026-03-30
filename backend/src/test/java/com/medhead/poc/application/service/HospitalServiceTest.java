@@ -59,9 +59,9 @@ class HospitalServiceTest {
     void listAll_shouldComposeHospitalsWithTheirSpecialtyBedSummary() {
         when(hospitalRepository.findAll()).thenReturn(List.of(FRED_BROOKS, JULIA_CRUSHER));
         when(hospitalSpecialtyRepository.findAll()).thenReturn(List.of(
-                new HospitalSpecialty(100L, 1L, CARDIOLOGY, 2),
-                new HospitalSpecialty(101L, 1L, IMMUNOLOGY, 3),
-                new HospitalSpecialty(200L, 2L, CARDIOLOGY, 0)
+                new HospitalSpecialty(100L, 1L, CARDIOLOGY, 2, 0L),
+                new HospitalSpecialty(101L, 1L, IMMUNOLOGY, 3, 0L),
+                new HospitalSpecialty(200L, 2L, CARDIOLOGY, 0, 0L)
         ));
 
         List<HospitalDto> result = hospitalService.listAll();
@@ -106,9 +106,9 @@ class HospitalServiceTest {
     void findById_shouldReturnHospitalWithItsSpecialties_whenFound() {
         when(hospitalRepository.findById(1L)).thenReturn(Optional.of(FRED_BROOKS));
         when(hospitalSpecialtyRepository.findAll()).thenReturn(List.of(
-                new HospitalSpecialty(100L, 1L, CARDIOLOGY, 2),
-                new HospitalSpecialty(101L, 1L, IMMUNOLOGY, 3),
-                new HospitalSpecialty(200L, 2L, CARDIOLOGY, 0)
+                new HospitalSpecialty(100L, 1L, CARDIOLOGY, 2, 0L),
+                new HospitalSpecialty(101L, 1L, IMMUNOLOGY, 3, 0L),
+                new HospitalSpecialty(200L, 2L, CARDIOLOGY, 0, 0L)
         ));
 
         HospitalDto result = hospitalService.findById(1L);

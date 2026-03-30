@@ -18,7 +18,8 @@ public class HospitalSpecialtyMapper {
                 entity.getId(),
                 entity.getHospital().getId(),
                 specialtyMapper.toDomain(entity.getSpecialty()),
-                entity.getAvailableBeds()
+                entity.getAvailableBeds(),
+                entity.getVersion()
         );
     }
 }

@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(
@@ -32,6 +33,10 @@ public class HospitalSpecialtyEntity {
 
     @Column(name = "available_beds", nullable = false)
     private int availableBeds;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private long version;
 
     protected HospitalSpecialtyEntity() {
     }
@@ -57,5 +62,17 @@ public class HospitalSpecialtyEntity {
 
     public int getAvailableBeds() {
         return availableBeds;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public void decrementAvailableBeds() {
+        if (availableBeds <= 0) {
+            throw new IllegalStateException(
+                    "Cannot decrement available_beds below zero for hospital_specialty id=" + id);
+        }
+        this.availableBeds = availableBeds - 1;
     }
 }

@@ -40,3 +40,5 @@ app:
     host: ${APP_OSRM_HOST:localhost}
     port: ${APP_OSRM_PORT:5000}
     read-timeout-ms: ${APP_OSRM_READ_TIMEOUT_MS:2000}
+  recommendation:
+    max-reservation-attempts: ${APP_RECOMMENDATION_MAX_RESERVATION_ATTEMPTS:3}
