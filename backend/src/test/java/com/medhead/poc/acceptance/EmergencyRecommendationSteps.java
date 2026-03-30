@@ -2,12 +2,15 @@ package com.medhead.poc.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.medhead.poc.domain.model.BedReservationEvent;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import java.util.List;
 import java.util.Map;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Step definitions driving the hospital-recommendation acceptance scenarios.
@@ -18,9 +21,23 @@ import java.util.Map;
 public class EmergencyRecommendationSteps {
 
     private final TestContext context;
+    private final JdbcTemplate jdbcTemplate;
+    private final BedReservationEventRecorder eventRecorder;
 
-    public EmergencyRecommendationSteps(TestContext context) {
+    public EmergencyRecommendationSteps(TestContext context,
+                                        JdbcTemplate jdbcTemplate,
+                                        BedReservationEventRecorder eventRecorder) {
         this.context = context;
+        this.jdbcTemplate = jdbcTemplate;
+        this.eventRecorder = eventRecorder;
+    }
+
+    @Given("{string} has {int} available beds for {string}")
+    public void hospital_has_n_available_beds_for_specialty(String hospitalName, int expectedBeds, String specialtyName) {
+        Integer beds = queryAvailableBeds(hospitalName, specialtyName);
+        assertThat(beds)
+                .as("available beds for %s / %s before the scenario acts", hospitalName, specialtyName)
+                .isEqualTo(expectedBeds);
     }
 
     @When("the user requests a recommendation for {string} near latitude {double} longitude {double}")
@@ -57,9 +74,45 @@ public class EmergencyRecommendationSteps {
         assertThat(context.lastResponse().jsonPath().getBoolean("fallback")).isFalse();
     }
 
-    @Then("the bed is not yet reserved")
-    public void the_bed_is_not_yet_reserved() {
-        assertThat(context.lastResponse().jsonPath().getBoolean("bedReserved")).isFalse();
+    @Then("the bed is reserved")
+    public void the_bed_is_reserved() {
+        assertThat(context.lastResponse().jsonPath().getBoolean("bedReserved")).isTrue();
+    }
+
+    @Then("{string} now has {int} available bed(s) for {string}")
+    public void hospital_now_has_n_available_beds_for_specialty(String hospitalName, int expectedBeds, String specialtyName) {
+        Integer beds = queryAvailableBeds(hospitalName, specialtyName);
+        assertThat(beds)
+                .as("available beds for %s / %s after the reservation", hospitalName, specialtyName)
+                .isEqualTo(expectedBeds);
+    }
+
+    @Then("a bed-reservation event was published for {string} and {string} with {int} remaining bed(s)")
+    public void a_bed_reservation_event_was_published(String hospitalName,
+                                                     String specialtyName,
+                                                     int expectedRemaining) {
+        List<BedReservationEvent> events = eventRecorder.events();
+        assertThat(events)
+                .as("bed-reservation events captured during the scenario")
+                .hasSize(1);
+        BedReservationEvent event = events.get(0);
+        assertThat(event.hospitalName()).isEqualTo(hospitalName);
+        assertThat(event.specialtyName()).isEqualTo(specialtyName);
+        assertThat(event.remainingBeds()).isEqualTo(expectedRemaining);
+    }
+
+    private Integer queryAvailableBeds(String hospitalName, String specialtyName) {
+        return jdbcTemplate.queryForObject("""
+                        SELECT hs.available_beds
+                          FROM hospital_specialties hs
+                          JOIN hospitals h  ON hs.hospital_id  = h.id
+                          JOIN specialties s ON hs.specialty_id = s.id
+                         WHERE h.name = ?
+                           AND s.name = ?
+                        """,
+                Integer.class,
+                hospitalName,
+                specialtyName);
     }
 
     private Long resolveSpecialtyId(String specialtyName) {

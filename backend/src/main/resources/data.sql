@@ -175,4 +175,6 @@ INSERT INTO hospital_specialties (hospital_id, specialty_id, available_beds) VAL
     (12, 41, 2),
     (12, 26, 3),
     (12, 17, 4)
-ON CONFLICT (hospital_id, specialty_id) DO NOTHING;
+ON CONFLICT (hospital_id, specialty_id) DO UPDATE
+    SET available_beds = EXCLUDED.available_beds,
+        version        = 0;

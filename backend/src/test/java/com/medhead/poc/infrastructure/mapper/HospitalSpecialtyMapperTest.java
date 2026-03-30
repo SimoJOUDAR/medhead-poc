@@ -14,7 +14,7 @@ class HospitalSpecialtyMapperTest {
     private final HospitalSpecialtyMapper mapper = new HospitalSpecialtyMapper(new SpecialtyMapper());
 
     @Test
-    void toDomain_shouldPreserveEveryFieldIncludingNestedSpecialtyAndGroup() {
+    void toDomain_shouldPreserveEveryFieldIncludingNestedSpecialtyAndGroupAndVersion() {
         HospitalEntity hospitalEntity = new HospitalEntity(
                 1L,
                 "Fred Brooks Hospital",
@@ -36,6 +36,7 @@ class HospitalSpecialtyMapperTest {
         assertThat(domain.id()).isEqualTo(42L);
         assertThat(domain.hospitalId()).isEqualTo(1L);
         assertThat(domain.availableBeds()).isEqualTo(2);
+        assertThat(domain.version()).isEqualTo(0L);
         assertThat(domain.specialty().id()).isEqualTo(21L);
         assertThat(domain.specialty().name()).isEqualTo("Cardiology");
         assertThat(domain.specialty().group().id()).isEqualTo(5L);
@@ -64,5 +65,6 @@ class HospitalSpecialtyMapperTest {
         assertThat(domain.specialty().group()).isNull();
         assertThat(domain.availableBeds()).isZero();
         assertThat(domain.hospitalId()).isEqualTo(9L);
+        assertThat(domain.version()).isEqualTo(0L);
     }
 }
