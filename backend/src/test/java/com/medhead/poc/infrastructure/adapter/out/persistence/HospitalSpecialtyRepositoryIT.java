@@ -43,6 +43,41 @@ class HospitalSpecialtyRepositoryIT extends AbstractIntegrationIT {
     }
 
     @Test
+    void findWithAnyAvailableBeds_shouldReturnEveryRowWithFreeBedsAcrossSpecialties() {
+        var rows = repository.findWithAnyAvailableBeds();
+
+        assertThat(rows)
+                .as("fallback candidate set must span multiple hospitals and specialties")
+                .isNotEmpty()
+                .allSatisfy(row -> assertThat(row.availableBeds()).isPositive())
+                .extracting(HospitalSpecialty::hospitalId)
+                .contains(FRED_BROOKS_ID, 3L, 5L);
+        assertThat(rows)
+                .extracting(row -> row.specialty().id())
+                .contains(CARDIOLOGY_ID, 54L);
+
+        Integer expectedCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM hospital_specialties WHERE available_beds > 0",
+                Integer.class);
+        assertThat(rows).hasSize(expectedCount);
+    }
+
+    @Test
+    void findWithAnyAvailableBeds_shouldExcludeRowsWithoutFreeBeds() {
+        jdbcTemplate.update("""
+                UPDATE hospital_specialties
+                   SET available_beds = 0
+                 WHERE hospital_id = ? AND specialty_id = ?
+                """, FRED_BROOKS_ID, CARDIOLOGY_ID);
+
+        var rows = repository.findWithAnyAvailableBeds();
+
+        assertThat(rows)
+                .noneMatch(row -> row.hospitalId() == FRED_BROOKS_ID
+                        && row.specialty().id() == CARDIOLOGY_ID);
+    }
+
+    @Test
     void reserveBed_shouldDecrementAvailableBedsAndBumpVersion() {
         HospitalSpecialty before = loadFredBrooksCardiology();
         assertThat(before.availableBeds()).isEqualTo(2);

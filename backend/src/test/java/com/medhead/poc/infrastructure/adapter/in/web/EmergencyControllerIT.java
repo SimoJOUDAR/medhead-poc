@@ -86,6 +86,8 @@ class EmergencyControllerIT extends AbstractIntegrationIT {
                 .andExpect(jsonPath("$.hospital.estimatedTravelTimeMinutes").value(1.0))
                 .andExpect(jsonPath("$.specialty.name").value("Cardiology"))
                 .andExpect(jsonPath("$.specialty.group").value("General medicine group"))
+                .andExpect(jsonPath("$.requestedSpecialty.name").value("Cardiology"))
+                .andExpect(jsonPath("$.requestedSpecialty.group").value("General medicine group"))
                 .andExpect(jsonPath("$.bedReserved").value(true))
                 .andExpect(jsonPath("$.fallback").value(false))
                 .andExpect(jsonPath("$.timestamp").exists());

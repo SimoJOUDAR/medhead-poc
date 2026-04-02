@@ -4,6 +4,7 @@ import com.medhead.poc.domain.model.Specialty;
 import com.medhead.poc.domain.port.out.SpecialtyRepository;
 import com.medhead.poc.infrastructure.mapper.SpecialtyMapper;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -22,5 +23,10 @@ public class JpaSpecialtyRepository implements SpecialtyRepository {
         return delegate.findAll().stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Optional<Specialty> findById(Long id) {
+        return delegate.findById(id).map(mapper::toDomain);
     }
 }

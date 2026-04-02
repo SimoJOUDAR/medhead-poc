@@ -1,7 +1,7 @@
 package com.medhead.poc.application.service;
 
 import com.medhead.poc.domain.exception.HospitalNotFoundException;
-import com.medhead.poc.domain.exception.NoSpecialtyMatchException;
+import com.medhead.poc.domain.exception.NoBedAvailableException;
 import com.medhead.poc.domain.exception.OptimisticLockConflictException;
 import com.medhead.poc.domain.model.BedReservationEvent;
 import com.medhead.poc.domain.model.Hospital;
@@ -9,11 +9,13 @@ import com.medhead.poc.domain.model.HospitalSpecialty;
 import com.medhead.poc.domain.model.Recommendation;
 import com.medhead.poc.domain.model.RecommendationQuery;
 import com.medhead.poc.domain.model.RouteInfo;
+import com.medhead.poc.domain.model.Specialty;
 import com.medhead.poc.domain.port.in.RecommendHospitalUseCase;
 import com.medhead.poc.domain.port.out.BedReservationEventPublisher;
 import com.medhead.poc.domain.port.out.DistanceCalculator;
 import com.medhead.poc.domain.port.out.HospitalRepository;
 import com.medhead.poc.domain.port.out.HospitalSpecialtyRepository;
+import com.medhead.poc.domain.port.out.SpecialtyRepository;
 import com.medhead.poc.infrastructure.config.RecommendationProperties;
 import java.time.Clock;
 import java.util.Comparator;
@@ -27,13 +29,21 @@ import org.springframework.stereotype.Service;
  * When the reservation loses the optimistic-lock race against a concurrent
  * writer, the service falls through to the next-nearest candidate up to
  * {@link RecommendationProperties#maxReservationAttempts()} attempts before
- * surrendering. The fallback path for "no candidate at all" lands in PR-S5-07.
+ * surrendering.
+ *
+ * <p>When no hospital has a bed in the requested specialty, the service widens
+ * the search to any hospital with at least one free bed (fallback flow,
+ * mitigating risk #3 in the risk register) and flags the resulting
+ * {@link Recommendation} so the caller can surface the specialty swap. If that
+ * fallback query is empty too, the use case throws
+ * {@link NoBedAvailableException}.
  */
 @Service
 public class EmergencyRecommendationService implements RecommendHospitalUseCase {
 
     private final HospitalSpecialtyRepository hospitalSpecialtyRepository;
     private final HospitalRepository hospitalRepository;
+    private final SpecialtyRepository specialtyRepository;
     private final DistanceCalculator distanceCalculator;
     private final BedReservationEventPublisher eventPublisher;
     private final RecommendationProperties properties;
@@ -41,12 +51,14 @@ public class EmergencyRecommendationService implements RecommendHospitalUseCase 
 
     public EmergencyRecommendationService(HospitalSpecialtyRepository hospitalSpecialtyRepository,
                                           HospitalRepository hospitalRepository,
+                                          SpecialtyRepository specialtyRepository,
                                           DistanceCalculator distanceCalculator,
                                           BedReservationEventPublisher eventPublisher,
                                           RecommendationProperties properties,
                                           Clock clock) {
         this.hospitalSpecialtyRepository = hospitalSpecialtyRepository;
         this.hospitalRepository = hospitalRepository;
+        this.specialtyRepository = specialtyRepository;
         this.distanceCalculator = distanceCalculator;
         this.eventPublisher = eventPublisher;
         this.properties = properties;
@@ -55,12 +67,27 @@ public class EmergencyRecommendationService implements RecommendHospitalUseCase 
 
     @Override
     public Recommendation recommend(RecommendationQuery query) {
-        List<HospitalSpecialty> candidates =
+        List<HospitalSpecialty> specialtyCandidates =
                 hospitalSpecialtyRepository.findWithAvailableBedsForSpecialty(query.specialtyId());
-        if (candidates.isEmpty()) {
-            throw new NoSpecialtyMatchException(query.specialtyId());
+        if (!specialtyCandidates.isEmpty()) {
+            Specialty requested = specialtyCandidates.get(0).specialty();
+            return reserveNearest(query, specialtyCandidates, requested, false);
         }
 
+        List<HospitalSpecialty> fallbackCandidates = hospitalSpecialtyRepository.findWithAnyAvailableBeds();
+        if (fallbackCandidates.isEmpty()) {
+            throw new NoBedAvailableException(query.specialtyId());
+        }
+
+        Specialty requested = specialtyRepository.findById(query.specialtyId())
+                .orElseThrow(() -> new NoBedAvailableException(query.specialtyId()));
+        return reserveNearest(query, fallbackCandidates, requested, true);
+    }
+
+    private Recommendation reserveNearest(RecommendationQuery query,
+                                          List<HospitalSpecialty> candidates,
+                                          Specialty requestedSpecialty,
+                                          boolean fallback) {
         List<Scored> ranked = candidates.stream()
                 .map(row -> {
                     Hospital hospital = hospitalRepository.findById(row.hospitalId())
@@ -91,10 +118,11 @@ public class EmergencyRecommendationService implements RecommendHospitalUseCase 
                 return new Recommendation(
                         scored.hospital(),
                         reserved.specialty(),
+                        requestedSpecialty,
                         reserved.availableBeds(),
                         scored.route(),
                         true,
-                        false,
+                        fallback,
                         event.timestamp()
                 );
             } catch (OptimisticLockConflictException conflict) {

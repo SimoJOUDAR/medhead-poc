@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.medhead.poc.domain.exception.NoSpecialtyMatchException;
+import com.medhead.poc.domain.exception.NoBedAvailableException;
 import com.medhead.poc.domain.exception.OptimisticLockConflictException;
 import com.medhead.poc.domain.model.BedReservationEvent;
 import com.medhead.poc.domain.model.GpsCoordinates;
@@ -24,6 +24,7 @@ import com.medhead.poc.domain.port.out.BedReservationEventPublisher;
 import com.medhead.poc.domain.port.out.DistanceCalculator;
 import com.medhead.poc.domain.port.out.HospitalRepository;
 import com.medhead.poc.domain.port.out.HospitalSpecialtyRepository;
+import com.medhead.poc.domain.port.out.SpecialtyRepository;
 import com.medhead.poc.infrastructure.config.RecommendationProperties;
 import java.time.Clock;
 import java.time.Instant;
@@ -42,12 +43,16 @@ class EmergencyRecommendationServiceTest {
 
     private static final Long CARDIOLOGY_ID = 21L;
     private static final SpecialtyGroup GENERAL_MEDICINE = new SpecialtyGroup(5L, "General medicine group");
+    private static final SpecialtyGroup PATHOLOGY = new SpecialtyGroup(8L, "Pathology group");
     private static final Specialty CARDIOLOGY = new Specialty(CARDIOLOGY_ID, "Cardiology", GENERAL_MEDICINE);
+    private static final Specialty IMMUNOLOGY = new Specialty(54L, "Immunology", PATHOLOGY);
 
     private static final GpsCoordinates ORIGIN = new GpsCoordinates(51.5230, -0.1310);
 
     private static final Hospital FRED_BROOKS = new Hospital(
             1L, "Fred Brooks Hospital", new GpsCoordinates(51.5230, -0.1300), "123 Computing Avenue");
+    private static final Hospital BEVERLY_BASHIR = new Hospital(
+            3L, "Beverly Bashir Hospital", new GpsCoordinates(53.4808, -2.2426), "42 Oxford Road");
     private static final Hospital ALAN_TURING = new Hospital(
             5L, "Alan Turing Hospital", new GpsCoordinates(53.4700, -2.2300), "17 Bletchley Street");
     private static final Hospital ANDREW_WILES = new Hospital(
@@ -57,9 +62,13 @@ class EmergencyRecommendationServiceTest {
     private static final HospitalSpecialty ALAN_TURING_CARDIO = new HospitalSpecialty(101L, 5L, CARDIOLOGY, 3, 3L);
     private static final HospitalSpecialty ANDREW_WILES_CARDIO = new HospitalSpecialty(102L, 10L, CARDIOLOGY, 1, 1L);
 
+    private static final HospitalSpecialty FRED_BROOKS_IMMUNO = new HospitalSpecialty(200L, 1L, IMMUNOLOGY, 3, 4L);
+    private static final HospitalSpecialty BEVERLY_BASHIR_IMMUNO = new HospitalSpecialty(201L, 3L, IMMUNOLOGY, 5, 2L);
+
     private static final RouteInfo FRED_BROOKS_ROUTE = new RouteInfo(0.2, 1.0);
     private static final RouteInfo ALAN_TURING_ROUTE = new RouteInfo(260.4, 200.0);
     private static final RouteInfo ANDREW_WILES_ROUTE = new RouteInfo(280.1, 210.0);
+    private static final RouteInfo BEVERLY_BASHIR_ROUTE = new RouteInfo(262.0, 201.0);
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-23T09:00:00Z");
 
@@ -68,6 +77,9 @@ class EmergencyRecommendationServiceTest {
 
     @Mock
     private HospitalRepository hospitalRepository;
+
+    @Mock
+    private SpecialtyRepository specialtyRepository;
 
     @Mock
     private DistanceCalculator distanceCalculator;
@@ -79,14 +91,7 @@ class EmergencyRecommendationServiceTest {
 
     @BeforeEach
     void setUp() {
-        Clock fixed = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
-        service = new EmergencyRecommendationService(
-                hospitalSpecialtyRepository,
-                hospitalRepository,
-                distanceCalculator,
-                eventPublisher,
-                new RecommendationProperties(3),
-                fixed);
+        service = buildService(3);
     }
 
     @Test
@@ -99,6 +104,7 @@ class EmergencyRecommendationServiceTest {
 
         assertThat(result.hospital()).isEqualTo(FRED_BROOKS);
         assertThat(result.specialty()).isEqualTo(CARDIOLOGY);
+        assertThat(result.requestedSpecialty()).isEqualTo(CARDIOLOGY);
         assertThat(result.availableBeds()).isEqualTo(1);
         assertThat(result.route()).isEqualTo(FRED_BROOKS_ROUTE);
         assertThat(result.bedReserved()).isTrue();
@@ -114,6 +120,7 @@ class EmergencyRecommendationServiceTest {
         assertThat(event.specialtyName()).isEqualTo("Cardiology");
         assertThat(event.remainingBeds()).isEqualTo(1);
         assertThat(event.timestamp()).isEqualTo(FIXED_NOW);
+        verifyNoInteractions(specialtyRepository);
     }
 
     @Test
@@ -133,15 +140,53 @@ class EmergencyRecommendationServiceTest {
     }
 
     @Test
-    void recommend_shouldThrowNoSpecialtyMatchException_whenCandidateSetEmpty() {
+    void recommend_shouldFallbackToNearestAnyBed_whenSpecialtyQueryIsEmpty() {
         when(hospitalSpecialtyRepository.findWithAvailableBedsForSpecialty(CARDIOLOGY_ID))
                 .thenReturn(List.of());
+        when(hospitalSpecialtyRepository.findWithAnyAvailableBeds())
+                .thenReturn(List.of(BEVERLY_BASHIR_IMMUNO, FRED_BROOKS_IMMUNO));
+        when(specialtyRepository.findById(CARDIOLOGY_ID)).thenReturn(Optional.of(CARDIOLOGY));
+        when(hospitalRepository.findById(1L)).thenReturn(Optional.of(FRED_BROOKS));
+        when(hospitalRepository.findById(3L)).thenReturn(Optional.of(BEVERLY_BASHIR));
+        when(distanceCalculator.calculate(eq(ORIGIN), eq(FRED_BROOKS.coordinates())))
+                .thenReturn(FRED_BROOKS_ROUTE);
+        when(distanceCalculator.calculate(eq(ORIGIN), eq(BEVERLY_BASHIR.coordinates())))
+                .thenReturn(BEVERLY_BASHIR_ROUTE);
+        HospitalSpecialty afterReservation = new HospitalSpecialty(200L, 1L, IMMUNOLOGY, 2, 5L);
+        when(hospitalSpecialtyRepository.reserveBed(FRED_BROOKS_IMMUNO)).thenReturn(afterReservation);
+
+        Recommendation result = service.recommend(new RecommendationQuery(CARDIOLOGY_ID, ORIGIN));
+
+        assertThat(result.hospital()).isEqualTo(FRED_BROOKS);
+        assertThat(result.specialty()).isEqualTo(IMMUNOLOGY);
+        assertThat(result.requestedSpecialty()).isEqualTo(CARDIOLOGY);
+        assertThat(result.availableBeds()).isEqualTo(2);
+        assertThat(result.route()).isEqualTo(FRED_BROOKS_ROUTE);
+        assertThat(result.bedReserved()).isTrue();
+        assertThat(result.fallback()).isTrue();
+        assertThat(result.timestamp()).isEqualTo(FIXED_NOW);
+
+        ArgumentCaptor<BedReservationEvent> captor = ArgumentCaptor.forClass(BedReservationEvent.class);
+        verify(eventPublisher).publish(captor.capture());
+        BedReservationEvent event = captor.getValue();
+        assertThat(event.hospitalId()).isEqualTo(1L);
+        assertThat(event.specialtyId()).isEqualTo(IMMUNOLOGY.id());
+        assertThat(event.specialtyName()).isEqualTo("Immunology");
+        assertThat(event.remainingBeds()).isEqualTo(2);
+    }
+
+    @Test
+    void recommend_shouldThrowNoBedAvailable_whenBothSpecialtyAndFallbackSetsEmpty() {
+        when(hospitalSpecialtyRepository.findWithAvailableBedsForSpecialty(CARDIOLOGY_ID))
+                .thenReturn(List.of());
+        when(hospitalSpecialtyRepository.findWithAnyAvailableBeds()).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.recommend(new RecommendationQuery(CARDIOLOGY_ID, ORIGIN)))
-                .isInstanceOf(NoSpecialtyMatchException.class)
+                .isInstanceOf(NoBedAvailableException.class)
                 .hasMessageContaining(CARDIOLOGY_ID.toString());
 
         verifyNoInteractions(eventPublisher);
+        verifyNoInteractions(specialtyRepository);
         verify(hospitalSpecialtyRepository, never()).reserveBed(any());
     }
 
@@ -187,14 +232,7 @@ class EmergencyRecommendationServiceTest {
 
     @Test
     void recommend_shouldStopRetryingAfterMaxAttempts_evenIfMoreCandidatesExist() {
-        Clock fixed = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
-        service = new EmergencyRecommendationService(
-                hospitalSpecialtyRepository,
-                hospitalRepository,
-                distanceCalculator,
-                eventPublisher,
-                new RecommendationProperties(1),
-                fixed);
+        service = buildService(1);
         stubThreeCardiologyCandidates();
         when(hospitalSpecialtyRepository.reserveBed(FRED_BROOKS_CARDIO))
                 .thenThrow(new OptimisticLockConflictException(FRED_BROOKS_CARDIO.id()));
@@ -205,6 +243,18 @@ class EmergencyRecommendationServiceTest {
         verify(hospitalSpecialtyRepository).reserveBed(FRED_BROOKS_CARDIO);
         verify(hospitalSpecialtyRepository, never()).reserveBed(ALAN_TURING_CARDIO);
         verify(hospitalSpecialtyRepository, never()).reserveBed(ANDREW_WILES_CARDIO);
+    }
+
+    private EmergencyRecommendationService buildService(int maxReservationAttempts) {
+        Clock fixed = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
+        return new EmergencyRecommendationService(
+                hospitalSpecialtyRepository,
+                hospitalRepository,
+                specialtyRepository,
+                distanceCalculator,
+                eventPublisher,
+                new RecommendationProperties(maxReservationAttempts),
+                fixed);
     }
 
     private void stubThreeCardiologyCandidates() {

@@ -40,6 +40,20 @@ public class EmergencyRecommendationSteps {
                 .isEqualTo(expectedBeds);
     }
 
+    @Given("no hospital has available beds for {string}")
+    public void no_hospital_has_available_beds_for(String specialtyName) {
+        int updated = jdbcTemplate.update("""
+                        UPDATE hospital_specialties hs
+                           SET available_beds = 0,
+                               version        = version + 1
+                         WHERE hs.specialty_id = (SELECT id FROM specialties WHERE name = ?)
+                        """,
+                specialtyName);
+        assertThat(updated)
+                .as("every row for %s must be zeroed to force the fallback path", specialtyName)
+                .isPositive();
+    }
+
     @When("the user requests a recommendation for {string} near latitude {double} longitude {double}")
     public void the_user_requests_a_recommendation(String specialtyName, double latitude, double longitude) {
         Long specialtyId = resolveSpecialtyId(specialtyName);
@@ -72,6 +86,23 @@ public class EmergencyRecommendationSteps {
     @Then("the recommendation is not marked as a fallback")
     public void the_recommendation_is_not_a_fallback() {
         assertThat(context.lastResponse().jsonPath().getBoolean("fallback")).isFalse();
+    }
+
+    @Then("the recommendation is marked as a fallback")
+    public void the_recommendation_is_marked_as_a_fallback() {
+        assertThat(context.lastResponse().jsonPath().getBoolean("fallback")).isTrue();
+    }
+
+    @Then("the requested specialty is {string}")
+    public void the_requested_specialty_is(String expectedName) {
+        String actual = context.lastResponse().jsonPath().getString("requestedSpecialty.name");
+        assertThat(actual).isEqualTo(expectedName);
+    }
+
+    @Then("the specialty served is not {string}")
+    public void the_specialty_served_is_not(String unexpectedName) {
+        String actual = context.lastResponse().jsonPath().getString("specialty.name");
+        assertThat(actual).isNotEqualTo(unexpectedName);
     }
 
     @Then("the bed is reserved")
