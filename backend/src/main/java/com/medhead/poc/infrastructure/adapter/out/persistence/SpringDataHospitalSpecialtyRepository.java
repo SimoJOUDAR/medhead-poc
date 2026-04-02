@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SpringDataHospitalSpecialtyRepository extends JpaRepository<HospitalSpecialtyEntity, Long> {
 
     List<HospitalSpecialtyEntity> findBySpecialtyIdAndAvailableBedsGreaterThan(Long specialtyId, int threshold);
+
+    List<HospitalSpecialtyEntity> findByAvailableBedsGreaterThan(int threshold);
 }

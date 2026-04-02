@@ -21,6 +21,14 @@ public interface HospitalSpecialtyRepository {
     List<HospitalSpecialty> findWithAvailableBedsForSpecialty(Long specialtyId);
 
     /**
+     * Returns every hospital-specialty row with at least one free bed,
+     * regardless of specialty. Drives the fallback flow when the requested
+     * specialty has no free bed anywhere and the use case widens the search to
+     * any site able to receive the patient.
+     */
+    List<HospitalSpecialty> findWithAnyAvailableBeds();
+
+    /**
      * Decrements {@code available_beds} by one on the given row, under
      * Hibernate optimistic locking: the caller's {@link HospitalSpecialty}
      * carries the version it was loaded with, and the adapter rejects the

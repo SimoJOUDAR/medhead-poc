@@ -44,6 +44,7 @@ public class EmergencyController {
         return new RecommendationResponse(
                 toHospitalDto(recommendation),
                 toSpecialtyDto(recommendation.specialty()),
+                toSpecialtyDto(recommendation.requestedSpecialty()),
                 recommendation.bedReserved(),
                 recommendation.fallback(),
                 recommendation.timestamp()

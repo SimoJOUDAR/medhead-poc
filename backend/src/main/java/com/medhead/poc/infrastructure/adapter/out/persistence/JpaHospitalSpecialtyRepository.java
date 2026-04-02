@@ -37,6 +37,13 @@ public class JpaHospitalSpecialtyRepository implements HospitalSpecialtyReposito
     }
 
     @Override
+    public List<HospitalSpecialty> findWithAnyAvailableBeds() {
+        return delegate.findByAvailableBedsGreaterThan(0).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public HospitalSpecialty reserveBed(HospitalSpecialty hospitalSpecialty) {
         HospitalSpecialtyEntity entity = delegate.findById(hospitalSpecialty.id())
