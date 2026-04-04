@@ -1,12 +1,10 @@
 package com.medhead.poc.infrastructure.adapter.in.web;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.medhead.poc.domain.exception.HospitalNotFoundException;
 import com.medhead.poc.support.AbstractIntegrationIT;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,10 +43,13 @@ class HospitalControllerIT extends AbstractIntegrationIT {
     }
 
     @Test
-    void findById_shouldPropagateHospitalNotFoundException_whenHospitalMissing() {
-        assertThatThrownBy(() -> mockMvc.perform(get("/api/v1/hospitals/9999").with(jwt())))
-                .rootCause()
-                .isInstanceOf(HospitalNotFoundException.class);
+    void findById_shouldReturn404_whenHospitalMissing() throws Exception {
+        mockMvc.perform(get("/api/v1/hospitals/9999").with(jwt()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("HOSPITAL_NOT_FOUND"))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("9999")))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
     }
 
     @Test
