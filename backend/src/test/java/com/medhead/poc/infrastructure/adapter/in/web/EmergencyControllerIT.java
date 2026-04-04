@@ -123,6 +123,78 @@ class EmergencyControllerIT extends AbstractIntegrationIT {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void recommend_shouldReturn400_whenLatitudeIsOutOfRange() throws Exception {
+        String body = """
+                {
+                    "specialtyId": %d,
+                    "latitude": 999.0,
+                    "longitude": 0.0
+                }
+                """.formatted(CARDIOLOGY_ID);
+
+        mockMvc.perform(post("/api/v1/emergency/recommend")
+                        .with(jwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.details[?(@.field == 'latitude')]").exists());
+    }
+
+    @Test
+    void recommend_shouldReturn400_whenRequiredFieldsAreMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/emergency/recommend")
+                        .with(jwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[?(@.field == 'specialtyId')]").exists())
+                .andExpect(jsonPath("$.details[?(@.field == 'latitude')]").exists())
+                .andExpect(jsonPath("$.details[?(@.field == 'longitude')]").exists());
+    }
+
+    @Test
+    void recommend_shouldReturn404_whenNoBedsAvailableAnywhere() throws Exception {
+        jdbcTemplate.update("UPDATE hospital_specialties SET available_beds = 0, version = version + 1");
+
+        String body = """
+                {
+                    "specialtyId": %d,
+                    "latitude": 51.5230,
+                    "longitude": -0.1310
+                }
+                """.formatted(CARDIOLOGY_ID);
+
+        mockMvc.perform(post("/api/v1/emergency/recommend")
+                        .with(jwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NO_BEDS_AVAILABLE"))
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void recommend_shouldReturn404_whenRequestedSpecialtyIdIsUnknown() throws Exception {
+        String body = """
+                {
+                    "specialtyId": 999999,
+                    "latitude": 51.5230,
+                    "longitude": -0.1310
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/emergency/recommend")
+                        .with(jwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SPECIALTY_NOT_FOUND"));
+    }
+
     @TestConfiguration
     static class RecordingBedReservationListenerConfiguration {
 

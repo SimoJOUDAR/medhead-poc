@@ -10,6 +10,7 @@ import com.medhead.poc.domain.model.RecommendationQuery;
 import com.medhead.poc.domain.model.Specialty;
 import com.medhead.poc.domain.model.SpecialtyGroup;
 import com.medhead.poc.domain.port.in.RecommendHospitalUseCase;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,7 +33,7 @@ public class EmergencyController {
     }
 
     @PostMapping("/recommend")
-    public ResponseEntity<RecommendationResponse> recommend(@RequestBody RecommendationRequest request) {
+    public ResponseEntity<RecommendationResponse> recommend(@Valid @RequestBody RecommendationRequest request) {
         Recommendation recommendation = recommendHospitalUseCase.recommend(new RecommendationQuery(
                 request.specialtyId(),
                 new GpsCoordinates(request.latitude(), request.longitude())

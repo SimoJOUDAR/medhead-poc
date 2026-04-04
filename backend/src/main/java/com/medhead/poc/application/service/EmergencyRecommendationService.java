@@ -3,6 +3,7 @@ package com.medhead.poc.application.service;
 import com.medhead.poc.domain.exception.HospitalNotFoundException;
 import com.medhead.poc.domain.exception.NoBedAvailableException;
 import com.medhead.poc.domain.exception.OptimisticLockConflictException;
+import com.medhead.poc.domain.exception.SpecialtyNotFoundException;
 import com.medhead.poc.domain.model.BedReservationEvent;
 import com.medhead.poc.domain.model.Hospital;
 import com.medhead.poc.domain.model.HospitalSpecialty;
@@ -80,7 +81,7 @@ public class EmergencyRecommendationService implements RecommendHospitalUseCase 
         }
 
         Specialty requested = specialtyRepository.findById(query.specialtyId())
-                .orElseThrow(() -> new NoBedAvailableException(query.specialtyId()));
+                .orElseThrow(() -> new SpecialtyNotFoundException(query.specialtyId()));
         return reserveNearest(query, fallbackCandidates, requested, true);
     }
 
