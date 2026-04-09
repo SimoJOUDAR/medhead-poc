@@ -36,6 +36,41 @@
 
 <!-- To be completed in session S2 -->
 
+### Running PostgreSQL via Docker Compose
+
+The backend targets PostgreSQL 16 for local runs; integration tests spin up their own Testcontainers instance and are independent of the compose stack. The `docker-compose.yml` at the repo root declares a single `postgres` service (image `postgres:16-alpine`, published on `localhost:5432`, database `medhead`, user/password `medhead`/`medhead`).
+
+```bash
+# Start Postgres in the background.
+docker compose up -d postgres
+
+# Verify health.
+docker compose ps postgres
+
+# Tail logs if something's off.
+docker compose logs -f postgres
+
+# Stop without losing data.
+docker compose stop postgres
+
+# Stop and wipe the volume (rare -- resets the seed on next boot).
+docker compose down -v
+```
+
+On first boot the backend runs `backend/src/main/resources/schema.sql` and `data.sql` automatically through Spring's datasource initializer. The schema creates four tables (`specialty_groups`, `specialties`, `hospitals`, `hospital_specialties`) plus a partial index on available beds and a lat/long index. The seed installs the 12 NHS specialty groups, 80 specialties, 12 fictional UK hospitals, and the §2.6 fixture (Fred Brooks cardiology=2/immunology=3, Julia Crusher cardiology=0, Beverly Bashir immunology=5/Diagnostic neuropathology=4/Clinical radiology=2).
+
+Override connection details via `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD`. Tests never hit the compose container -- they use a disposable Testcontainers instance bound through `@ServiceConnection`.
+
+To restore the seed without wiping the volume (e.g. after a scenario has zeroed bed counts):
+
+```bash
+docker cp backend/src/main/resources/data.sql medhead-postgres:/tmp/data.sql
+docker exec -e PGPASSWORD=medhead medhead-postgres \
+  psql -U medhead -d medhead -f /tmp/data.sql
+```
+
+The seed file uses `ON CONFLICT DO UPDATE` on `(hospital_id, specialty_id)` so re-application is idempotent and resets both `available_beds` and the optimistic-lock `version` column.
+
 ### Running OSRM locally
 
 The backend computes road distances and travel times through a local
@@ -95,6 +130,55 @@ curl -s -X POST http://localhost:8080/api/v1/auth/login \
 The response payload includes a `token` field; send it as `Authorization: Bearer <token>` on every subsequent `/api/v1/**` call. Tokens are HS256-signed and expire after 60 minutes by default.
 
 Production deployments must override the signing secret and user store via environment variables (`APP_SECURITY_JWT_SECRET`, `APP_SECURITY_USERS_0_PASSWORD`, `APP_SECURITY_JWT_TTL_MINUTES`). The default secret shipped in `application.yaml` is flagged as dev-only and must not leave a developer machine.
+
+### End-to-end walkthrough: the main recommendation scenario
+
+The canonical acceptance scenario takes a cardiology emergency near Fred Brooks Hospital, recommends Fred Brooks, reserves a bed, and publishes a bed-reservation event. All the moving parts are exercisable with plain `curl` + `docker exec` once Postgres and the backend are up.
+
+```bash
+# 1. Start Postgres and boot the backend (separate terminals).
+docker compose up -d postgres
+cd backend && ./mvnw spring-boot:run
+
+# 2. Acquire a JWT.
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"demo","password":"demo"}' | jq -r .token)
+
+# 3. Look up the Cardiology specialty id from the catalogue.
+CARDIOLOGY_ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/specialties \
+  | jq '.[] | select(.name=="Cardiology") | .id')
+
+# 4. Inspect Fred Brooks' cardiology bed count before the call.
+docker exec -e PGPASSWORD=medhead medhead-postgres \
+  psql -U medhead -d medhead -tA -c "
+    SELECT hs.available_beds
+      FROM hospital_specialties hs
+      JOIN hospitals  h ON hs.hospital_id  = h.id
+      JOIN specialties s ON hs.specialty_id = s.id
+     WHERE h.name = 'Fred Brooks Hospital'
+       AND s.name = 'Cardiology';"
+# Expected: 2
+
+# 5. Request a recommendation near Fred Brooks (lat 51.523, lon -0.131).
+curl -s -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -X POST http://localhost:8080/api/v1/emergency/recommend \
+  -d "{\"specialtyId\":$CARDIOLOGY_ID,\"latitude\":51.523,\"longitude\":-0.131}" \
+  | jq
+# Expected: hospital.name == "Fred Brooks Hospital",
+#           specialty.name == "Cardiology",
+#           fallback == false, bedReserved == true,
+#           hospital.availableBeds == 1
+```
+
+Two side-effects should be observable:
+
+- The backend log shows `[BED_RESERVATION] hospitalId=1 hospital="Fred Brooks Hospital" specialtyId=<...> specialty="Cardiology" remainingBeds=1` -- the Spring `ApplicationEvent` emitted by the reservation flow.
+- Re-running the psql query from step 4 returns `1` -- the bed has been decremented atomically under optimistic locking.
+
+Restore the seed with the `docker cp` + `psql -f` recipe from the [Running PostgreSQL](#running-postgresql-via-docker-compose) section when you're done experimenting.
 
 ## Running the Tests
 
