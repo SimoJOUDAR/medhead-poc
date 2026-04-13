@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { AuthProvider } from './auth/AuthProvider'
 import { useAuth } from './auth/authContext'
 import { LoginForm } from './auth/LoginForm'
 import { apiFetch } from './auth/apiClient'
+import { SpecialtyDropdown } from './recommend/SpecialtyDropdown'
+import { useSpecialties } from './recommend/useSpecialties'
 
 type PingResponse = { message: string }
 
 function AuthenticatedPanel() {
   const { token, logout } = useAuth()
   const [message, setMessage] = useState<string>('Connecting…')
+  const [specialtyId, setSpecialtyId] = useState<number | null>(null)
+  const { specialties, loading, error } = useSpecialties()
 
   useEffect(() => {
     if (!token) return
@@ -25,9 +29,25 @@ function AuthenticatedPanel() {
     }
   }, [token, logout])
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+  }
+
   return (
     <section aria-label="Signed in">
-      <p>Logged in as demo. Backend says: {message}</p>
+      <form aria-label="Hospital recommendation" onSubmit={handleSubmit} noValidate>
+        <SpecialtyDropdown
+          specialties={specialties}
+          loading={loading}
+          error={error}
+          value={specialtyId}
+          onChange={setSpecialtyId}
+        />
+        <button type="submit" disabled={specialtyId === null}>
+          Find hospital
+        </button>
+      </form>
+      <p>Backend says: {message}</p>
       <button type="button" onClick={logout}>
         Log out
       </button>
