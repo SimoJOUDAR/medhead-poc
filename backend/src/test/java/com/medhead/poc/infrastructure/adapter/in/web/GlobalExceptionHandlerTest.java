@@ -7,18 +7,14 @@ import static org.mockito.Mockito.when;
 import com.medhead.poc.application.dto.ErrorResponse;
 import com.medhead.poc.domain.exception.HospitalNotFoundException;
 import com.medhead.poc.domain.exception.NoBedAvailableException;
-import com.medhead.poc.domain.exception.OptimisticLockConflictException;
 import com.medhead.poc.domain.exception.SpecialtyNotFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -85,6 +81,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void handleConstraintViolation_mapsTo400WithFieldDetails() {
         ConstraintViolation<Object> violation = mock(ConstraintViolation.class);
         jakarta.validation.Path path = mock(jakarta.validation.Path.class);
@@ -106,8 +103,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleHttpMessageNotReadable_mapsTo400() {
-        ResponseEntity<ErrorResponse> response = handler.handleHttpMessageNotReadable(
-                new HttpMessageNotReadableException("malformed", (org.springframework.http.HttpInputMessage) null));
+        ResponseEntity<ErrorResponse> response = handler.handleHttpMessageNotReadable();
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).isNotNull();
@@ -117,7 +113,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleOptimisticLock_mapsTo503() {
-        ResponseEntity<ErrorResponse> response = handler.handleOptimisticLock(new OptimisticLockConflictException(77L));
+        ResponseEntity<ErrorResponse> response = handler.handleOptimisticLock();
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(response.getBody()).isNotNull();
@@ -125,8 +121,19 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleRoutingUnavailable_mapsTo503WithCode() {
+        ResponseEntity<ErrorResponse> response = handler.handleRoutingUnavailable();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        ErrorResponse body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.code()).isEqualTo("ROUTING_UNAVAILABLE");
+        assertThat(body.details()).isNull();
+    }
+
+    @Test
     void handleUnexpected_mapsTo500WithoutLeakingInternals() {
-        ResponseEntity<ErrorResponse> response = handler.handleUnexpected(new RuntimeException("NullPointerException at com.internal.Foo:42"));
+        ResponseEntity<ErrorResponse> response = handler.handleUnexpected();
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         ErrorResponse body = response.getBody();
@@ -138,7 +145,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleBadCredentials_keepsLegacyShape() {
-        ResponseEntity<?> response = handler.handleBadCredentials(new BadCredentialsException("bad"));
+        ResponseEntity<?> response = handler.handleBadCredentials();
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response.getBody()).isInstanceOf(java.util.Map.class);
