@@ -1,5 +1,6 @@
 package com.medhead.poc.infrastructure.adapter.out.routing;
 
+import com.medhead.poc.domain.exception.RoutingServiceUnavailableException;
 import com.medhead.poc.domain.model.GpsCoordinates;
 import com.medhead.poc.domain.model.RouteInfo;
 import com.medhead.poc.domain.port.out.DistanceCalculator;
@@ -7,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 /**
  * OSRM-backed {@link DistanceCalculator}. Calls the local {@code osrm-routed}
@@ -35,13 +37,22 @@ public class OsrmDistanceCalculator implements DistanceCalculator {
                 formatCoordinate(destination.latitude())
         );
 
-        OsrmRouteResponse response = osrmRestClient.get()
-                .uri(path)
-                .retrieve()
-                .body(OsrmRouteResponse.class);
+        OsrmRouteResponse response;
+        try {
+            response = osrmRestClient.get()
+                    .uri(path)
+                    .retrieve()
+                    .body(OsrmRouteResponse.class);
+        } catch (RestClientException exception) {
+            throw new RoutingServiceUnavailableException(
+                    "Routing service (OSRM) is unavailable: " + exception.getMessage(),
+                    exception);
+        }
 
         if (response == null || response.routes() == null || response.routes().isEmpty()) {
-            throw new IllegalStateException("OSRM returned no route for " + origin + " -> " + destination);
+            throw new RoutingServiceUnavailableException(
+                    "OSRM returned no route for " + origin + " -> " + destination,
+                    null);
         }
         OsrmRoute first = response.routes().get(0);
         return new RouteInfo(first.distance() / 1000.0, first.duration() / 60.0);

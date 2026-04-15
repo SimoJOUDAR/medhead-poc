@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.medhead.poc.domain.exception.RoutingServiceUnavailableException;
 import com.medhead.poc.domain.model.GpsCoordinates;
 import com.medhead.poc.domain.model.RouteInfo;
 import com.medhead.poc.infrastructure.config.OsrmConfig;
@@ -19,7 +20,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -85,7 +85,7 @@ class OsrmDistanceCalculatorIT {
     }
 
     @Test
-    void calculate_shouldThrow_whenReadTimeoutElapsesBeforeResponseArrives() {
+    void calculate_shouldWrapReadTimeoutAsRoutingServiceUnavailable() {
         wireMock.stubFor(get(urlPathMatching("/route/v1/driving/.*"))
                 .willReturn(aResponse()
                         .withStatus(200)
@@ -98,6 +98,38 @@ class OsrmDistanceCalculatorIT {
         assertThatThrownBy(() -> subject.calculate(
                 new GpsCoordinates(51.5230, -0.1310),
                 new GpsCoordinates(51.5230, -0.1300)))
-                .isInstanceOf(ResourceAccessException.class);
+                .isInstanceOf(RoutingServiceUnavailableException.class);
+    }
+
+    @Test
+    void calculate_shouldWrapServerErrorAsRoutingServiceUnavailable() {
+        wireMock.stubFor(get(urlPathMatching("/route/v1/driving/.*"))
+                .willReturn(aResponse()
+                        .withStatus(503)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"code\":\"NoRoute\"}")));
+
+        OsrmDistanceCalculator subject = calculatorWithReadTimeoutMs(2_000);
+
+        assertThatThrownBy(() -> subject.calculate(
+                new GpsCoordinates(51.5230, -0.1310),
+                new GpsCoordinates(51.5230, -0.1300)))
+                .isInstanceOf(RoutingServiceUnavailableException.class);
+    }
+
+    @Test
+    void calculate_shouldWrapEmptyRoutesAsRoutingServiceUnavailable() {
+        wireMock.stubFor(get(urlPathMatching("/route/v1/driving/.*"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"code\":\"Ok\",\"routes\":[]}")));
+
+        OsrmDistanceCalculator subject = calculatorWithReadTimeoutMs(2_000);
+
+        assertThatThrownBy(() -> subject.calculate(
+                new GpsCoordinates(51.5230, -0.1310),
+                new GpsCoordinates(51.5230, -0.1300)))
+                .isInstanceOf(RoutingServiceUnavailableException.class);
     }
 }
