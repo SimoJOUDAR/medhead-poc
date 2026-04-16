@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
+import App from '../App'
 import { AuthProvider } from '../auth/AuthProvider'
 import { TOKEN_STORAGE_KEY } from '../auth/authContext'
 import { RecommendForm } from './RecommendForm'
@@ -99,5 +100,202 @@ describe('RecommendForm (happy-path behaviour)', () => {
       latitude: 51.523,
       longitude: -0.131,
     })
+  })
+})
+
+interface RecommendFetchMockOptions {
+  recommend: () => Promise<Response>
+}
+
+function mockRecommendFetch({ recommend }: RecommendFetchMockOptions) {
+  const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+    async (input) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url === '/api/v1/specialties') {
+        return jsonResponse(200, [CARDIOLOGY])
+      }
+      if (url === '/api/v1/emergency/recommend') {
+        return recommend()
+      }
+      throw new Error(`Unexpected fetch: ${url}`)
+    },
+  )
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+async function submitValidRequest() {
+  const user = userEvent.setup()
+  await screen.findByRole('option', { name: 'Cardiology' })
+  await user.selectOptions(screen.getByRole('combobox', { name: /specialty/i }), 'Cardiology')
+  await user.type(screen.getByLabelText(/latitude/i), '51.523')
+  await user.type(screen.getByLabelText(/longitude/i), '-0.131')
+  await user.click(screen.getByRole('button', { name: /find hospital/i }))
+  return user
+}
+
+describe('RecommendForm (error branches)', () => {
+  beforeEach(() => {
+    window.sessionStorage.setItem(TOKEN_STORAGE_KEY, 'jwt-token')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.sessionStorage.clear()
+  })
+
+  it('renders a field-list alert when the backend returns 400 VALIDATION_ERROR', async () => {
+    mockRecommendFetch({
+      recommend: async () =>
+        jsonResponse(400, {
+          code: 'VALIDATION_ERROR',
+          message: 'Request body failed validation',
+          details: [
+            { field: 'latitude', message: 'must be between -90 and 90' },
+            { field: 'longitude', message: 'must be between -180 and 180' },
+          ],
+        }),
+    })
+
+    render(<RecommendForm />, { wrapper: withAuth })
+    await submitValidRequest()
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Please check: latitude, longitude')
+    expect(alert).toHaveAttribute('aria-live', 'assertive')
+  })
+
+  it('renders the dispatch-line copy for 404 NO_BEDS_AVAILABLE', async () => {
+    mockRecommendFetch({
+      recommend: async () =>
+        jsonResponse(404, { code: 'NO_BEDS_AVAILABLE', message: 'No beds available anywhere' }),
+    })
+
+    render(<RecommendForm />, { wrapper: withAuth })
+    await submitValidRequest()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /no hospitals have beds available right now/i,
+    )
+  })
+
+  it('renders the pick-another-specialty copy for 404 SPECIALTY_NOT_FOUND', async () => {
+    mockRecommendFetch({
+      recommend: async () =>
+        jsonResponse(404, { code: 'SPECIALTY_NOT_FOUND', message: 'Specialty 999 not found' }),
+    })
+
+    render(<RecommendForm />, { wrapper: withAuth })
+    await submitValidRequest()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /selected specialty is no longer available/i,
+    )
+  })
+
+  it('renders the overloaded copy for 503 responses', async () => {
+    mockRecommendFetch({
+      recommend: async () =>
+        jsonResponse(503, {
+          code: 'ROUTING_UNAVAILABLE',
+          message: 'Routing service is unavailable',
+        }),
+    })
+
+    render(<RecommendForm />, { wrapper: withAuth })
+    await submitValidRequest()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /system is under heavy load and could not secure a bed/i,
+    )
+  })
+
+  it('renders the connection-check copy when fetch rejects (network failure)', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        if (url === '/api/v1/specialties') {
+          return jsonResponse(200, [CARDIOLOGY])
+        }
+        if (url === '/api/v1/emergency/recommend') {
+          throw new TypeError('Network down')
+        }
+        throw new Error(`Unexpected fetch: ${url}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<RecommendForm />, { wrapper: withAuth })
+    await submitValidRequest()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/could not reach the backend/i)
+  })
+
+  it('keeps the form interactive after an error so the user can retry', async () => {
+    let call = 0
+    mockRecommendFetch({
+      recommend: async () => {
+        call += 1
+        if (call === 1) {
+          return jsonResponse(503, {
+            code: 'ROUTING_UNAVAILABLE',
+            message: 'Routing service is unavailable',
+          })
+        }
+        return jsonResponse(200, FRED_BROOKS)
+      },
+    })
+
+    render(<RecommendForm />, { wrapper: withAuth })
+    const user = await submitValidRequest()
+
+    await screen.findByRole('alert')
+    const submit = screen.getByRole('button', { name: /find hospital/i })
+    expect(submit).toBeEnabled()
+
+    await user.click(submit)
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: /fred brooks hospital/i }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('RecommendForm + App (401 returns the user to login)', () => {
+  beforeEach(() => {
+    window.sessionStorage.setItem(TOKEN_STORAGE_KEY, 'jwt-token')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.sessionStorage.clear()
+  })
+
+  it('clears the token and renders the login form when the backend returns 401', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        if (url === '/api/v1/specialties') {
+          return jsonResponse(200, [CARDIOLOGY])
+        }
+        if (url === '/api/v1/ping') {
+          return jsonResponse(200, { message: 'pong' })
+        }
+        if (url === '/api/v1/emergency/recommend') {
+          return jsonResponse(401, { code: 'UNAUTHORIZED', message: 'Token expired' })
+        }
+        throw new Error(`Unexpected fetch: ${url}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+    await submitValidRequest()
+
+    await waitFor(() =>
+      expect(window.sessionStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull(),
+    )
+    expect(await screen.findByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 })

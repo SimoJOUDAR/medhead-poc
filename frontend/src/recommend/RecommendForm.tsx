@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { errorMessageFor } from './errorMessage'
 import { LocationInputs, type LocationValue } from './LocationInputs'
 import { RecommendationResult } from './RecommendationResult'
 import { SpecialtyDropdown } from './SpecialtyDropdown'
@@ -13,10 +14,13 @@ export function RecommendForm() {
     loading: specialtiesLoading,
     error: specialtiesError,
   } = useSpecialties()
-  const { submit, result, loading: submitting } = useRecommendation()
+  const { submit, result, loading: submitting, error: submitError } = useRecommendation()
 
   const [specialtyId, setSpecialtyId] = useState<number | null>(null)
   const [location, setLocation] = useState<LocationValue>(EMPTY_LOCATION)
+
+  const alertMessage =
+    submitError && submitError.status !== 401 ? errorMessageFor(submitError) : null
 
   const canSubmit =
     specialtyId !== null &&
@@ -56,6 +60,11 @@ export function RecommendForm() {
         <button type="submit" disabled={!canSubmit}>
           {submitting ? 'Finding the nearest hospital…' : 'Find hospital'}
         </button>
+        {alertMessage && (
+          <p role="alert" aria-live="assertive">
+            {alertMessage}
+          </p>
+        )}
       </form>
       {submitting && !result && (
         <p role="status">Finding the nearest hospital…</p>
