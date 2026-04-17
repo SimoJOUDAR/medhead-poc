@@ -279,9 +279,6 @@ describe('RecommendForm + App (401 returns the user to login)', () => {
         if (url === '/api/v1/specialties') {
           return jsonResponse(200, [CARDIOLOGY])
         }
-        if (url === '/api/v1/ping') {
-          return jsonResponse(200, { message: 'pong' })
-        }
         if (url === '/api/v1/emergency/recommend') {
           return jsonResponse(401, { code: 'UNAUTHORIZED', message: 'Token expired' })
         }
