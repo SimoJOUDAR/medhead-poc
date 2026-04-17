@@ -30,8 +30,6 @@ import org.springframework.security.web.SecurityFilterChain;
  *   <li>{@code /swagger-ui.html}, {@code /swagger-ui/**}, {@code /v3/api-docs},
  *       {@code /v3/api-docs/**} -- API documentation surface</li>
  *   <li>{@code /api/v1/auth/login} -- credential exchange for a JWT</li>
- *   <li>{@code /api/v1/ping} -- walking-skeleton smoke endpoint, preserved
- *       until the real front-end UI replaces it</li>
  * </ul>
  */
 @Configuration
@@ -49,7 +47,6 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/v1/ping").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

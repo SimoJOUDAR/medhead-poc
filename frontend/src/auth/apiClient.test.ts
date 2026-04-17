@@ -49,7 +49,7 @@ describe('apiFetch', () => {
   it('omits the Authorization header when no token is present', async () => {
     const fetchMock = stubFetch(jsonResponse(200, {}))
 
-    await apiFetch('/api/v1/ping', { token: null, onUnauthorized })
+    await apiFetch('/api/v1/specialties', { token: null, onUnauthorized })
 
     const init = fetchMock.mock.calls[0][1]!
     const headers = init.headers as Record<string, string>

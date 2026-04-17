@@ -13,6 +13,7 @@
 - [Running the Tests](#running-the-tests)
 - [CI/CD Pipeline](#cicd-pipeline)
 - [Branch workflow](#branch-workflow)
+- [Accessibility](#accessibility)
 - [API Documentation](#api-documentation)
 - [Project Structure](#project-structure)
 
@@ -208,6 +209,23 @@ Direct pushes to `master` are disabled. Every change reaches `master` through a 
 ### Commits
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `ci:`, `docs:`, `test:`, `chore:`, `refactor:`) so history stays scannable and can drive release notes later.
+
+## Accessibility
+
+The front-end targets **WCAG 2.1 AA**. Compliance is enforced automatically and verified manually.
+
+### Automated check
+
+`frontend/src/__tests__/accessibility.test.tsx` runs [`jest-axe`](https://github.com/nickcolley/jest-axe) against the two main UI states -- the unauthenticated login form and the authenticated recommendation form -- and asserts zero violations against the `wcag2a`, `wcag2aa`, `wcag21a`, and `wcag21aa` rule tags. The test runs as part of `npm test` and `frontend-ci`.
+
+### Manual sweep
+
+Run through the following before any demo; the steps passed on the last audit.
+
+- **Keyboard-only flow.** From a cold page load, `Tab` reaches every interactive element in reading order -- unauthenticated: username → password → submit; authenticated: specialty → latitude → longitude → submit → log out. `Shift+Tab` walks the reverse order. `Enter` submits the active form; `Space` toggles buttons; arrow keys navigate the specialty `<select>`. No focus trap, no keyboard dead-ends.
+- **Visible focus indicator.** The default user-agent focus ring is preserved (no `outline: none` overrides); every interactive element shows a visible focus state when reached via keyboard.
+- **Colour contrast.** Body text (`--text` on `--bg`) and headings (`--text-h` on `--bg`) exceed the 4.5:1 ratio required for normal text in both light and dark schemes.
+- **Screen-reader labelling.** VoiceOver (macOS) and NVDA (Windows) announce every control with its role and label: inputs via their bound `<label htmlFor>`, the select via its label + group structure, the submit buttons via their accessible name, the error region via `role="alert"` + `aria-live="assertive"`, and the result card via its `<h2>` tied through `aria-labelledby`.
 
 ## API Documentation
 

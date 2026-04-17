@@ -47,9 +47,18 @@ class SecurityConfigIT {
     }
 
     @Test
-    void ping_shouldBeReachableAnonymously() throws Exception {
+    void pingPath_shouldRequireAuthentication_whenNoTokenIsProvided() throws Exception {
         mockMvc.perform(get("/api/v1/ping"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void pingPath_shouldReturn404WithValidToken_sinceControllerIsRemoved() throws Exception {
+        String token = obtainDemoToken();
+
+        mockMvc.perform(get("/api/v1/ping")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isNotFound());
     }
 
     @Test
