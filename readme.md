@@ -195,6 +195,20 @@ cd backend/jmeter && ./run-baseline.sh
 
 The run produces an HTML dashboard under `backend/jmeter/report/` whose per-endpoint p50 / p95 / p99 + throughput numbers are the inputs to the Phase A verdict. The filled report for the committed reference run is in [`backend/jmeter/phase_a_baseline.md`](backend/jmeter/phase_a_baseline.md); the raw samples (`results.jtl`) and dashboard (`report/index.html`) are committed alongside it so the numbers are independently verifiable.
 
+### Running coverage locally
+
+Coverage is observed, not gated -- the build does not fail on a low number. JaCoCo on the backend merges Surefire (unit) + Failsafe (integration + Cucumber) execution data into a single aggregate report; Vitest on the frontend uses the v8 provider.
+
+```bash
+# Backend -- aggregate report at backend/target/site/jacoco-aggregate/index.html
+cd backend && ./mvnw -B clean verify
+
+# Frontend -- report at frontend/coverage/index.html
+cd frontend && npm run test:coverage
+```
+
+The backend aggregate run is the one wired into `./mvnw -B verify`; no extra flag is required. Artefact upload + threshold gating are deferred to the CI hardening pass.
+
 ### API tooling (Postman)
 
 The full S5 API surface is exercised by a Newman-runnable Postman collection under [`postman/`](postman/README.md): JWT login (with a token-stash test script populating the `{{token}}` environment variable), the specialty and hospital catalogues, single hospital lookup, and the emergency recommendation endpoint on both the §2.6 main scenario and the fallback path. Every request carries `pm.test` assertions on its status code and at least one shape field so the collection doubles as a self-checking smoke test.
