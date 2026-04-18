@@ -1,0 +1,251 @@
+{
+  "info": {
+    "_postman_id": "8b1c2e2a-1d2f-4f6f-9c1c-medhead-poc-001",
+    "name": "MedHead PoC",
+    "description": "Interactive and Newman-runnable API collection for the MedHead PoC backend. Covers the full S5 surface: JWT login (stashes token into the {{token}} environment variable), specialty catalogue, hospital catalogue, single hospital lookup, and the emergency recommendation endpoint exercised on both the main scenario and the fallback path. Each request asserts status code + one shape field via pm.test, so `newman run` is a self-checking smoke test.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Login (acquire JWT)",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "login"]
+        },
+        "description": "Exchanges the seeded demo credentials for a signed HS256 JWT and stores the token in the {{token}} environment variable for the rest of the collection."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('token returned', function () {",
+              "    pm.expect(body.token, 'token').to.be.a('string').and.not.empty;",
+              "});",
+              "pm.environment.set('token', body.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List specialties",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/specialties",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "specialties"]
+        },
+        "description": "Returns the seeded NHS specialty catalogue (12 groups, 80 specialties)."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('returns a non-empty specialty array', function () {",
+              "    pm.expect(body).to.be.an('array').that.is.not.empty;",
+              "});",
+              "pm.test('first entry has id and name', function () {",
+              "    pm.expect(body[0]).to.have.property('id');",
+              "    pm.expect(body[0]).to.have.property('name');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List hospitals",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/hospitals",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "hospitals"]
+        },
+        "description": "Returns the seeded hospital catalogue with each hospital's specialty-bed summary."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('returns a non-empty hospital array', function () {",
+              "    pm.expect(body).to.be.an('array').that.is.not.empty;",
+              "});",
+              "pm.test('Fred Brooks Hospital is in the catalogue', function () {",
+              "    const fredBrooks = body.find(function (h) { return h.name === 'Fred Brooks Hospital'; });",
+              "    pm.expect(fredBrooks, 'Fred Brooks Hospital').to.exist;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Find hospital by id (Fred Brooks)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/hospitals/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "hospitals", "1"]
+        },
+        "description": "Returns the §2.6 fixture's first hospital -- Fred Brooks Hospital -- by its seeded primary key."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('hospital is Fred Brooks', function () {",
+              "    pm.expect(body.name).to.eql('Fred Brooks Hospital');",
+              "});",
+              "pm.test('specialties summary present', function () {",
+              "    pm.expect(body.specialties).to.be.an('array').that.is.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recommend hospital (main scenario - cardiology near Fred Brooks)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"specialtyId\": 21,\n  \"latitude\": 51.523,\n  \"longitude\": -0.131\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/emergency/recommend",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "emergency", "recommend"]
+        },
+        "description": "Reproduces the §2.6 main acceptance scenario. A cardiology emergency near Fred Brooks Hospital is expected to return Fred Brooks with bedReserved=true and fallback=false. Each successful run decrements Fred Brooks' cardiology bed count by one; reseed via the readme recipe before exhausting the seed."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('Fred Brooks Hospital recommended', function () {",
+              "    pm.expect(body.hospital.name).to.eql('Fred Brooks Hospital');",
+              "});",
+              "pm.test('bed reserved', function () {",
+              "    pm.expect(body.bedReserved).to.be.true;",
+              "});",
+              "pm.test('fallback path not taken', function () {",
+              "    pm.expect(body.fallback).to.be.false;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recommend hospital (fallback - specialty with no beds anywhere)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"specialtyId\": 60,\n  \"latitude\": 51.523,\n  \"longitude\": -0.131\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/emergency/recommend",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "emergency", "recommend"]
+        },
+        "description": "Triggers the fallback path. Specialty 60 (Dental public health) has no rows in hospital_specialties, so the recommendation widens the search to the nearest hospital with any available bed and the response carries fallback=true plus the original requestedSpecialty."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('fallback flag set', function () {",
+              "    pm.expect(body.fallback).to.be.true;",
+              "});",
+              "pm.test('requested specialty preserved', function () {",
+              "    pm.expect(body.requestedSpecialty.id).to.eql(60);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

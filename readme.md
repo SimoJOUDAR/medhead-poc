@@ -195,6 +195,22 @@ cd backend/jmeter && ./run-baseline.sh
 
 The run produces an HTML dashboard under `backend/jmeter/report/` whose per-endpoint p50 / p95 / p99 + throughput numbers are the inputs to the Phase A verdict. The filled report for the committed reference run is in [`backend/jmeter/phase_a_baseline.md`](backend/jmeter/phase_a_baseline.md); the raw samples (`results.jtl`) and dashboard (`report/index.html`) are committed alongside it so the numbers are independently verifiable.
 
+### API tooling (Postman)
+
+The full S5 API surface is exercised by a Newman-runnable Postman collection under [`postman/`](postman/README.md): JWT login (with a token-stash test script populating the `{{token}}` environment variable), the specialty and hospital catalogues, single hospital lookup, and the emergency recommendation endpoint on both the §2.6 main scenario and the fallback path. Every request carries `pm.test` assertions on its status code and at least one shape field so the collection doubles as a self-checking smoke test.
+
+```bash
+# Boot the stack first.
+docker compose up -d postgres osrm
+cd backend && ./mvnw spring-boot:run
+
+# Then, from the repo root, run the collection headlessly.
+newman run postman/medhead-poc.postman_collection.json \
+  -e postman/medhead-poc.postman_environment.json
+```
+
+Import / interactive-use instructions and a note on side-effects (each successful main-scenario call reserves a Fred Brooks cardiology bed) are in [`postman/README.md`](postman/README.md).
+
 ## CI/CD Pipeline
 
 <!-- To be completed in session S5 -->
