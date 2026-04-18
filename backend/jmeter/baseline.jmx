@@ -1,0 +1,564 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="MedHead Phase A Baseline" enabled="true">
+      <stringProp name="TestPlan.comments">S7 PR-S7-01 -- Phase A baseline stress plan. Read-path steady-state + write-path burst, per kickoff resolution #2. Parameters externalised via baseline.properties.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="protocol" elementType="Argument">
+            <stringProp name="Argument.name">protocol</stringProp>
+            <stringProp name="Argument.value">${__P(protocol,http)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="host" elementType="Argument">
+            <stringProp name="Argument.name">host</stringProp>
+            <stringProp name="Argument.value">${__P(host,localhost)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="port" elementType="Argument">
+            <stringProp name="Argument.name">port</stringProp>
+            <stringProp name="Argument.value">${__P(port,8080)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="user" elementType="Argument">
+            <stringProp name="Argument.name">user</stringProp>
+            <stringProp name="Argument.value">${__P(user,demo)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="password" elementType="Argument">
+            <stringProp name="Argument.name">password</stringProp>
+            <stringProp name="Argument.value">${__P(password,demo)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="dbUrl" elementType="Argument">
+            <stringProp name="Argument.name">dbUrl</stringProp>
+            <stringProp name="Argument.value">${__P(dbUrl,jdbc:postgresql://localhost:5432/medhead)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="dbUser" elementType="Argument">
+            <stringProp name="Argument.name">dbUser</stringProp>
+            <stringProp name="Argument.value">${__P(dbUser,medhead)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="dbPassword" elementType="Argument">
+            <stringProp name="Argument.name">dbPassword</stringProp>
+            <stringProp name="Argument.value">${__P(dbPassword,medhead)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="readThreads" elementType="Argument">
+            <stringProp name="Argument.name">readThreads</stringProp>
+            <stringProp name="Argument.value">${__P(readThreads,200)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="readRampUp" elementType="Argument">
+            <stringProp name="Argument.name">readRampUp</stringProp>
+            <stringProp name="Argument.value">${__P(readRampUp,30)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="readDuration" elementType="Argument">
+            <stringProp name="Argument.name">readDuration</stringProp>
+            <stringProp name="Argument.value">${__P(readDuration,120)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="readThroughputPerMin" elementType="Argument">
+            <stringProp name="Argument.name">readThroughputPerMin</stringProp>
+            <stringProp name="Argument.value">${__P(readThroughputPerMin,48000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="writeThreads" elementType="Argument">
+            <stringProp name="Argument.name">writeThreads</stringProp>
+            <stringProp name="Argument.value">${__P(writeThreads,50)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="writeIterations" elementType="Argument">
+            <stringProp name="Argument.name">writeIterations</stringProp>
+            <stringProp name="Argument.value">${__P(writeIterations,200)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="writeRampUp" elementType="Argument">
+            <stringProp name="Argument.name">writeRampUp</stringProp>
+            <stringProp name="Argument.value">${__P(writeRampUp,5)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="hospitalId" elementType="Argument">
+            <stringProp name="Argument.name">hospitalId</stringProp>
+            <stringProp name="Argument.value">${__P(hospitalId,1)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="writeSpecialtyId" elementType="Argument">
+            <stringProp name="Argument.name">writeSpecialtyId</stringProp>
+            <stringProp name="Argument.value">${__P(writeSpecialtyId,21)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="writeLatitude" elementType="Argument">
+            <stringProp name="Argument.name">writeLatitude</stringProp>
+            <stringProp name="Argument.value">${__P(writeLatitude,51.523)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="writeLongitude" elementType="Argument">
+            <stringProp name="Argument.name">writeLongitude</stringProp>
+            <stringProp name="Argument.value">${__P(writeLongitude,-0.131)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <JDBCDataSource guiclass="TestBeanGUI" testclass="JDBCDataSource" testname="Postgres connection pool" enabled="true">
+        <boolProp name="autocommit">true</boolProp>
+        <stringProp name="checkQuery">SELECT 1</stringProp>
+        <stringProp name="connectionAge">5000</stringProp>
+        <stringProp name="connectionProperties"></stringProp>
+        <stringProp name="dataSource">medhead</stringProp>
+        <stringProp name="dbUrl">${dbUrl}</stringProp>
+        <stringProp name="driver">org.postgresql.Driver</stringProp>
+        <stringProp name="initQuery"></stringProp>
+        <boolProp name="keepAlive">true</boolProp>
+        <stringProp name="password">${dbPassword}</stringProp>
+        <stringProp name="poolMax">2</stringProp>
+        <boolProp name="preinit">false</boolProp>
+        <stringProp name="timeout">10000</stringProp>
+        <stringProp name="transactionIsolation">DEFAULT</stringProp>
+        <stringProp name="trimInterval">60000</stringProp>
+        <stringProp name="username">${dbUser}</stringProp>
+      </JDBCDataSource>
+      <hashTree/>
+
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp -- Reseed hospital_specialties" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="Reseed available_beds from data.sql fixture" enabled="true">
+          <stringProp name="dataSource">medhead</stringProp>
+          <stringProp name="queryType">Update Statement</stringProp>
+          <stringProp name="query">INSERT INTO hospital_specialties (hospital_id, specialty_id, available_beds) VALUES
+    (1, 21, 2), (1, 54, 3), (1, 17, 4), (1, 28, 5),
+    (2, 21, 0), (2, 17, 3), (2, 28, 2),
+    (3, 54, 5), (3, 49, 4), (3, 69, 2), (3, 17, 3), (3, 53, 2),
+    (4, 18, 4), (4, 28, 6), (4, 47, 3), (4, 72, 2), (4, 17, 5),
+    (5, 21, 3), (5, 42, 4), (5,  2, 2), (5, 17, 6),
+    (6,  3, 2), (6, 34, 3), (6, 52, 4), (6, 39, 2), (6, 53, 3),
+    (7, 47, 5), (7, 46, 2), (7, 28, 4), (7, 17, 3),
+    (8, 36, 3), (8, 73, 2), (8, 17, 4), (8, 72, 5),
+    (9, 65, 6), (9, 66, 3), (9, 63, 2), (9, 32, 4),
+    (10, 21, 1), (10, 71, 2), (10, 72, 3), (10, 17, 4), (10,  1, 5),
+    (11, 78, 4), (11, 17, 5), (11,  1, 3), (11, 77, 2),
+    (12, 25, 2), (12, 27, 3), (12, 41, 2), (12, 26, 3), (12, 17, 4)
+ON CONFLICT (hospital_id, specialty_id) DO UPDATE
+    SET available_beds = EXCLUDED.available_beds,
+        version        = 0</stringProp>
+          <stringProp name="queryArguments"></stringProp>
+          <stringProp name="queryArgumentsTypes"></stringProp>
+          <stringProp name="variableNames"></stringProp>
+          <stringProp name="resultVariable"></stringProp>
+          <stringProp name="queryTimeout"></stringProp>
+          <stringProp name="resultSetMaxRows"></stringProp>
+          <stringProp name="resultSetHandler">Store as String</stringProp>
+        </JDBCSampler>
+        <hashTree/>
+      </hashTree>
+
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp -- Initial login, stash JWT as JMeter property" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /api/v1/auth/login" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&quot;username&quot;:&quot;${user}&quot;,&quot;password&quot;:&quot;${password}&quot;}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${host}</stringProp>
+          <stringProp name="HTTPSampler.port">${port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">/api/v1/auth/login</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="JSON content type" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract token from login response" enabled="true">
+            <stringProp name="JSONPostProcessor.referenceNames">token</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.token</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">1</stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Store token as JMeter property" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">def t = vars.get(&quot;token&quot;)
+if (t == null || t.isEmpty()) {
+    throw new IllegalStateException(&quot;Initial login did not yield a token -- aborting test run&quot;)
+}
+props.put(&quot;token&quot;, t)</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Login returned 200" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Read-path steady-state (800 req/s target)" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${readThreads}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${readRampUp}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${readDuration}</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Bearer token + JSON" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${__P(token)}</stringProp>
+            </elementProp>
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Accept</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Target 800 req/s aggregate (all active threads shared)" enabled="true">
+          <intProp name="calcMode">4</intProp>
+          <stringProp name="throughput">${readThroughputPerMin}</stringProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /api/v1/specialties" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${host}</stringProp>
+          <stringProp name="HTTPSampler.port">${port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">/api/v1/specialties</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">5000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Refresh JWT on 401" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">// Refreshes the shared JMeter property &quot;token&quot; when the previous sampler
+// returned a 401. Thread-safe via synchronized(props); the first thread through
+// re-logs-in, subsequent threads observe the refreshed value.
+if (prev != null &amp;&amp; &quot;401&quot;.equals(prev.getResponseCode())) {
+    synchronized (props) {
+        def protocol = vars.get(&quot;protocol&quot;)
+        def host     = vars.get(&quot;host&quot;)
+        def port     = vars.get(&quot;port&quot;)
+        def user     = vars.get(&quot;user&quot;)
+        def password = vars.get(&quot;password&quot;)
+        def url  = new URL(protocol + &quot;://&quot; + host + &quot;:&quot; + port + &quot;/api/v1/auth/login&quot;)
+        def conn = url.openConnection()
+        conn.setRequestMethod(&quot;POST&quot;)
+        conn.setDoOutput(true)
+        conn.setConnectTimeout(5000)
+        conn.setReadTimeout(5000)
+        conn.setRequestProperty(&quot;Content-Type&quot;, &quot;application/json&quot;)
+        conn.outputStream.withWriter(&quot;UTF-8&quot;) { w -&gt;
+            w.write(&apos;{&quot;username&quot;:&quot;&apos; + user + &apos;&quot;,&quot;password&quot;:&quot;&apos; + password + &apos;&quot;}&apos;)
+        }
+        def status = conn.responseCode
+        if (status == 200) {
+            def body = conn.inputStream.getText(&quot;UTF-8&quot;)
+            def m = body =~ /&quot;token&quot;\s*:\s*&quot;([^&quot;]+)&quot;/
+            if (m.find()) {
+                props.put(&quot;token&quot;, m.group(1))
+                log.info(&quot;JWT refreshed after 401 on &quot; + prev.getSampleLabel())
+            }
+        } else {
+            log.warn(&quot;Token refresh failed with HTTP &quot; + status + &quot; on &quot; + prev.getSampleLabel())
+        }
+    }
+}</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /api/v1/hospitals" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${host}</stringProp>
+          <stringProp name="HTTPSampler.port">${port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">/api/v1/hospitals</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">5000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Refresh JWT on 401" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">// Refreshes the shared JMeter property &quot;token&quot; when the previous sampler
+// returned a 401. Thread-safe via synchronized(props); the first thread through
+// re-logs-in, subsequent threads observe the refreshed value.
+if (prev != null &amp;&amp; &quot;401&quot;.equals(prev.getResponseCode())) {
+    synchronized (props) {
+        def protocol = vars.get(&quot;protocol&quot;)
+        def host     = vars.get(&quot;host&quot;)
+        def port     = vars.get(&quot;port&quot;)
+        def user     = vars.get(&quot;user&quot;)
+        def password = vars.get(&quot;password&quot;)
+        def url  = new URL(protocol + &quot;://&quot; + host + &quot;:&quot; + port + &quot;/api/v1/auth/login&quot;)
+        def conn = url.openConnection()
+        conn.setRequestMethod(&quot;POST&quot;)
+        conn.setDoOutput(true)
+        conn.setConnectTimeout(5000)
+        conn.setReadTimeout(5000)
+        conn.setRequestProperty(&quot;Content-Type&quot;, &quot;application/json&quot;)
+        conn.outputStream.withWriter(&quot;UTF-8&quot;) { w -&gt;
+            w.write(&apos;{&quot;username&quot;:&quot;&apos; + user + &apos;&quot;,&quot;password&quot;:&quot;&apos; + password + &apos;&quot;}&apos;)
+        }
+        def status = conn.responseCode
+        if (status == 200) {
+            def body = conn.inputStream.getText(&quot;UTF-8&quot;)
+            def m = body =~ /&quot;token&quot;\s*:\s*&quot;([^&quot;]+)&quot;/
+            if (m.find()) {
+                props.put(&quot;token&quot;, m.group(1))
+                log.info(&quot;JWT refreshed after 401 on &quot; + prev.getSampleLabel())
+            }
+        } else {
+            log.warn(&quot;Token refresh failed with HTTP &quot; + status + &quot; on &quot; + prev.getSampleLabel())
+        }
+    }
+}</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /api/v1/hospitals/{id}" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${host}</stringProp>
+          <stringProp name="HTTPSampler.port">${port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">/api/v1/hospitals/${hospitalId}</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">5000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Refresh JWT on 401" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">// Refreshes the shared JMeter property &quot;token&quot; when the previous sampler
+// returned a 401. Thread-safe via synchronized(props); the first thread through
+// re-logs-in, subsequent threads observe the refreshed value.
+if (prev != null &amp;&amp; &quot;401&quot;.equals(prev.getResponseCode())) {
+    synchronized (props) {
+        def protocol = vars.get(&quot;protocol&quot;)
+        def host     = vars.get(&quot;host&quot;)
+        def port     = vars.get(&quot;port&quot;)
+        def user     = vars.get(&quot;user&quot;)
+        def password = vars.get(&quot;password&quot;)
+        def url  = new URL(protocol + &quot;://&quot; + host + &quot;:&quot; + port + &quot;/api/v1/auth/login&quot;)
+        def conn = url.openConnection()
+        conn.setRequestMethod(&quot;POST&quot;)
+        conn.setDoOutput(true)
+        conn.setConnectTimeout(5000)
+        conn.setReadTimeout(5000)
+        conn.setRequestProperty(&quot;Content-Type&quot;, &quot;application/json&quot;)
+        conn.outputStream.withWriter(&quot;UTF-8&quot;) { w -&gt;
+            w.write(&apos;{&quot;username&quot;:&quot;&apos; + user + &apos;&quot;,&quot;password&quot;:&quot;&apos; + password + &apos;&quot;}&apos;)
+        }
+        def status = conn.responseCode
+        if (status == 200) {
+            def body = conn.inputStream.getText(&quot;UTF-8&quot;)
+            def m = body =~ /&quot;token&quot;\s*:\s*&quot;([^&quot;]+)&quot;/
+            if (m.find()) {
+                props.put(&quot;token&quot;, m.group(1))
+                log.info(&quot;JWT refreshed after 401 on &quot; + prev.getSampleLabel())
+            }
+        } else {
+            log.warn(&quot;Token refresh failed with HTTP &quot; + status + &quot; on &quot; + prev.getSampleLabel())
+        }
+    }
+}</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Write-path burst (POST /api/v1/emergency/recommend)" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">${writeIterations}</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${writeThreads}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${writeRampUp}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Bearer token + JSON" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${__P(token)}</stringProp>
+            </elementProp>
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Content-Type</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Accept</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /api/v1/emergency/recommend" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&quot;specialtyId&quot;:${writeSpecialtyId},&quot;latitude&quot;:${writeLatitude},&quot;longitude&quot;:${writeLongitude}}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${host}</stringProp>
+          <stringProp name="HTTPSampler.port">${port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${protocol}</stringProp>
+          <stringProp name="HTTPSampler.path">/api/v1/emergency/recommend</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Refresh JWT on 401" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">// Refreshes the shared JMeter property &quot;token&quot; when the previous sampler
+// returned a 401. Thread-safe via synchronized(props); the first thread through
+// re-logs-in, subsequent threads observe the refreshed value.
+if (prev != null &amp;&amp; &quot;401&quot;.equals(prev.getResponseCode())) {
+    synchronized (props) {
+        def protocol = vars.get(&quot;protocol&quot;)
+        def host     = vars.get(&quot;host&quot;)
+        def port     = vars.get(&quot;port&quot;)
+        def user     = vars.get(&quot;user&quot;)
+        def password = vars.get(&quot;password&quot;)
+        def url  = new URL(protocol + &quot;://&quot; + host + &quot;:&quot; + port + &quot;/api/v1/auth/login&quot;)
+        def conn = url.openConnection()
+        conn.setRequestMethod(&quot;POST&quot;)
+        conn.setDoOutput(true)
+        conn.setConnectTimeout(5000)
+        conn.setReadTimeout(5000)
+        conn.setRequestProperty(&quot;Content-Type&quot;, &quot;application/json&quot;)
+        conn.outputStream.withWriter(&quot;UTF-8&quot;) { w -&gt;
+            w.write(&apos;{&quot;username&quot;:&quot;&apos; + user + &apos;&quot;,&quot;password&quot;:&quot;&apos; + password + &apos;&quot;}&apos;)
+        }
+        def status = conn.responseCode
+        if (status == 200) {
+            def body = conn.inputStream.getText(&quot;UTF-8&quot;)
+            def m = body =~ /&quot;token&quot;\s*:\s*&quot;([^&quot;]+)&quot;/
+            if (m.find()) {
+                props.put(&quot;token&quot;, m.group(1))
+                log.info(&quot;JWT refreshed after 401 on &quot; + prev.getSampleLabel())
+            }
+        } else {
+            log.warn(&quot;Token refresh failed with HTTP &quot; + status + &quot; on &quot; + prev.getSampleLabel())
+        }
+    }
+}</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
