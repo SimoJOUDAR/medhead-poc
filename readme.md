@@ -185,6 +185,16 @@ Restore the seed with the `docker cp` + `psql -f` recipe from the [Running Postg
 
 <!-- To be completed in session S4 -->
 
+### Non-functional tests
+
+Stress coverage lives outside the Maven build so a slow or flaky load run never blocks the per-PR `./mvnw -B verify` loop. The JMeter test plan, its runner script, and the prerequisites checklist (JMeter 5.6+, Postgres JDBC driver on the JMeter classpath, full stack booted) are all documented in [`backend/jmeter/README.md`](backend/jmeter/README.md). One-line reminder:
+
+```bash
+cd backend/jmeter && ./run-baseline.sh
+```
+
+The run produces an HTML dashboard under `backend/jmeter/report/` whose per-endpoint p50 / p95 / p99 + throughput numbers are the inputs to the Phase A verdict. The filled report for the committed reference run is in [`backend/jmeter/phase_a_baseline.md`](backend/jmeter/phase_a_baseline.md); the raw samples (`results.jtl`) and dashboard (`report/index.html`) are committed alongside it so the numbers are independently verifiable.
+
 ## CI/CD Pipeline
 
 <!-- To be completed in session S5 -->

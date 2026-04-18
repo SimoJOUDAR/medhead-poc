@@ -31,5 +31,9 @@ postgres-data/
 backend/target/surefire-reports/
 backend/target/failsafe-reports/
 
+backend/jmeter/archive/
+backend/jmeter/jmeter.log
+backend/jmeter/temp/
+
 # Logs
 *.log
