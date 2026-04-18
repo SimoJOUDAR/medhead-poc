@@ -1,6 +1,7 @@
 # Build output
 backend/target/
 frontend/build/
+frontend/coverage/
 frontend/dist/
 frontend/node_modules/
 
