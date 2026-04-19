@@ -42,3 +42,16 @@ app:
     read-timeout-ms: ${APP_OSRM_READ_TIMEOUT_MS:2000}
   recommendation:
     max-reservation-attempts: ${APP_RECOMMENDATION_MAX_RESERVATION_ATTEMPTS:3}
+  cache:
+    hospitals-by-specialty:
+      maximum-size: 200
+      expire-after-write: 10m
+    all-hospitals-with-beds:
+      maximum-size: 1
+      expire-after-write: 10m
+    osrm-distances:
+      maximum-size: 5000
+      expire-after-write: 5m
+    specialties:
+      maximum-size: 200
+      expire-after-write: 30m
