@@ -4,8 +4,10 @@ import com.medhead.poc.domain.exception.RoutingServiceUnavailableException;
 import com.medhead.poc.domain.model.GpsCoordinates;
 import com.medhead.poc.domain.model.RouteInfo;
 import com.medhead.poc.domain.port.out.DistanceCalculator;
+import com.medhead.poc.infrastructure.config.CachingConfig;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -27,6 +29,9 @@ public class OsrmDistanceCalculator implements DistanceCalculator {
     }
 
     @Override
+    @Cacheable(
+            cacheNames = CachingConfig.OSRM_DISTANCES,
+            key = "T(com.medhead.poc.infrastructure.adapter.out.routing.OsrmCacheKey).of(#origin, #destination)")
     public RouteInfo calculate(GpsCoordinates origin, GpsCoordinates destination) {
         String path = String.format(
                 Locale.ROOT,

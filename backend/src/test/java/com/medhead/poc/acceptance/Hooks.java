@@ -2,6 +2,7 @@ package com.medhead.poc.acceptance;
 
 import io.cucumber.java.Before;
 import javax.sql.DataSource;
+import org.springframework.cache.CacheManager;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
@@ -11,16 +12,20 @@ import org.springframework.jdbc.datasource.init.ScriptUtils;
  * {@code recommend-main-scenario.feature} mutates {@code hospital_specialties}
  * by reserving a bed. The root INSERTs are idempotent
  * ({@code ON CONFLICT DO UPDATE}) which also resets the {@code version}
- * column, so optimistic-lock counters don't drift across scenarios.
+ * column, so optimistic-lock counters don't drift across scenarios. Also wipes
+ * the Caffeine caches so cached read results from the previous scenario do not
+ * mask the freshly-seeded rows.
  */
 public class Hooks {
 
     private final DataSource dataSource;
     private final BedReservationEventRecorder eventRecorder;
+    private final CacheManager cacheManager;
 
-    public Hooks(DataSource dataSource, BedReservationEventRecorder eventRecorder) {
+    public Hooks(DataSource dataSource, BedReservationEventRecorder eventRecorder, CacheManager cacheManager) {
         this.dataSource = dataSource;
         this.eventRecorder = eventRecorder;
+        this.cacheManager = cacheManager;
     }
 
     @Before
@@ -29,5 +34,6 @@ public class Hooks {
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("data.sql"));
         }
         eventRecorder.reset();
+        cacheManager.getCacheNames().forEach(name -> cacheManager.getCache(name).clear());
     }
 }

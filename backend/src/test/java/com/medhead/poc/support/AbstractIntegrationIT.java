@@ -1,7 +1,10 @@
 package com.medhead.poc.support;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.cache.CacheManager;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
@@ -30,5 +33,19 @@ public abstract class AbstractIntegrationIT {
 
     static {
         POSTGRES.start();
+    }
+
+    @Autowired
+    private CacheManager integrationCacheManager;
+
+    /**
+     * Drops every cache entry before each test so a previous test's mutations
+     * (bed reservations, fixture rewrites) cannot leak into the next via the
+     * shared Caffeine caches living on the cached Spring context.
+     */
+    @BeforeEach
+    void clearAllCaches() {
+        integrationCacheManager.getCacheNames()
+                .forEach(name -> integrationCacheManager.getCache(name).clear());
     }
 }

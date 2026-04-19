@@ -5,7 +5,9 @@ import com.medhead.poc.domain.model.Specialty;
 import com.medhead.poc.domain.model.SpecialtyGroup;
 import com.medhead.poc.domain.port.in.ListSpecialtiesUseCase;
 import com.medhead.poc.domain.port.out.SpecialtyRepository;
+import com.medhead.poc.infrastructure.config.CachingConfig;
 import java.util.List;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -23,6 +25,7 @@ public class SpecialtyService implements ListSpecialtiesUseCase {
     }
 
     @Override
+    @Cacheable(cacheNames = CachingConfig.SPECIALTIES, key = "'all'")
     public List<SpecialtyDto> listAll() {
         return specialtyRepository.findAll().stream()
                 .map(SpecialtyService::toDto)
