@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# MedHead Phase A baseline runner.
+# MedHead JMeter baseline runner (used for both Phase A and Phase B reference runs).
 #
 # Invokes Apache JMeter in non-GUI mode against baseline.jmx, writes a raw
 # results log to results.jtl, and generates the HTML dashboard under report/.
 # Prints the report entry-point path on completion so the operator can open it
-# straight from the terminal.
+# straight from the terminal. To promote a fresh run to a phase reference,
+# rename results.jtl + report/ to results_phase_<x>.jtl + report_phase_<x>/
+# and commit them.
 #
 # Prerequisites (see README.md in this folder for the full checklist):
 #   * Apache JMeter 5.6+ on PATH (`jmeter --version`).

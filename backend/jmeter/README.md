@@ -6,10 +6,13 @@ Phase A measures the baseline -- the backend as shipped, with no caching and
 no tuning -- so the caching decision taken in subsequent work can be argued
 from empirical data, not assertion.
 
-The filled report with percentiles, throughput, verdict, and the
-committed raw evidence it cites is in [`phase_a_baseline.md`](./phase_a_baseline.md).
-The raw samples (`results.jtl`) and HTML dashboard (`report/`) from the
-reference run live next to it so the numbers are independently
+The filled reports with percentiles, throughput, verdict, and the
+committed raw evidence each cites live alongside the plan:
+[`phase_a_baseline.md`](./phase_a_baseline.md) (uncached baseline) and
+[`phase_b_rerun.md`](./phase_b_rerun.md) (post-cache rerun). The
+phase-suffixed raw samples (`results_phase_a.jtl`,
+`results_phase_b.jtl`) and HTML dashboards (`report_phase_a/`,
+`report_phase_b/`) sit next to them so the numbers are independently
 verifiable.
 
 ## 1. Prerequisites
@@ -182,16 +185,21 @@ backend/jmeter/
 ├── baseline.jmx           <- JMeter test plan
 ├── baseline.properties    <- externalised parameters
 ├── run-baseline.sh        <- one-command runner
-├── phase_a_baseline.md    <- filled report (numbers + verdict + narrative)
-├── results.jtl            <- reference run raw samples (CSV)
-├── report/                <- reference run HTML dashboard
-└── archive/               <- prior runs preserved locally (git-ignored)
+├── phase_a_baseline.md    <- Phase A filled report
+├── phase_b_rerun.md       <- Phase B filled report (post-cache rerun)
+├── results_phase_a.jtl    <- Phase A reference run raw samples (CSV)
+├── results_phase_b.jtl    <- Phase B reference run raw samples (CSV)
+├── report_phase_a/        <- Phase A reference run HTML dashboard
+├── report_phase_b/        <- Phase B reference run HTML dashboard
+└── archive/               <- prior fresh runs preserved locally (git-ignored)
 ```
 
-`results.jtl` + `report/` are the committed artefacts of the reference
-run that `phase_a_baseline.md` cites. A fresh invocation of
-`run-baseline.sh` moves the current working-tree copy of both into
-`./archive/<timestamp>/` before writing new output, so a local re-run
-does not silently overwrite committed evidence -- `git diff` will show
-the replacement and lets you decide whether to promote the new run to
-the reference.
+The runner writes its fresh outputs to the canonical `results.jtl` +
+`report/` paths and archives any pre-existing copies of those paths
+under `./archive/<timestamp>/` before the new run starts. To promote a
+fresh run to a phase reference, copy `results.jtl` + `report/` to a
+phase-suffixed path (e.g. `results_phase_b.jtl` + `report_phase_b/`)
+and commit them; this convention keeps each phase's evidence inspectable
+from the working tree without trampling prior phases. `git diff` shows
+the replacement at the canonical paths and lets you decide whether to
+promote the new run.
