@@ -28,4 +28,26 @@ class CachingConfigIT extends AbstractIntegrationIT {
                     .isInstanceOf(CaffeineCache.class);
         }
     }
+
+    @Test
+    void cacheManager_shouldRecordStatsForEveryCache() {
+        for (String name : cacheManager.getCacheNames()) {
+            CaffeineCache cache = (CaffeineCache) cacheManager.getCache(name);
+            assertThat(cache).isNotNull();
+
+            @SuppressWarnings("unchecked")
+            com.github.benmanes.caffeine.cache.Cache<Object, Object> nativeCache =
+                    (com.github.benmanes.caffeine.cache.Cache<Object, Object>) cache.getNativeCache();
+
+            String key = "stats-probe-" + name;
+            nativeCache.put(key, "v");
+            nativeCache.getIfPresent(key);
+            nativeCache.getIfPresent("absent-" + name);
+            nativeCache.invalidate(key);
+
+            assertThat(nativeCache.stats().requestCount())
+                    .as("cache %s must record hit/miss stats (Caffeine.recordStats enabled)", name)
+                    .isPositive();
+        }
+    }
 }

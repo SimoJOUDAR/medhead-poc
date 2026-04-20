@@ -4,10 +4,12 @@
 > **Plan**: [`baseline.jmx`](./baseline.jmx) + [`baseline.properties`](./baseline.properties)
 > **Runner**: [`run-baseline.sh`](./run-baseline.sh)
 > **Reference run date**: 2026-04-24, 21:23:24 -- 21:26:53 CEST (3 min 29 s)
-> **Committed raw evidence**: [`results.jtl`](./results.jtl) + [`report/index.html`](./report/index.html)
+> **Committed raw evidence**: [`results_phase_a.jtl`](./results_phase_a.jtl) + [`report_phase_a/index.html`](./report_phase_a/index.html)
 > **Target under test**: the feature-complete backend delivered by the
 > preceding back-end implementation session, before any caching or tuning.
 > Phase A is the empirical baseline the caching decision is argued against.
+> **Companion report**: [`phase_b_rerun.md`](./phase_b_rerun.md) -- the post-cache
+> rerun against the same plan; the two reports cross-cite for the SLA delta.
 
 ---
 
@@ -63,8 +65,8 @@ UPDATE`), so results do not depend on residual local DB state. Seed total:
 
 ## 3. Results -- read-path steady-state
 
-Source: [`report/statistics.json`](./report/statistics.json) (mirror of the
-Statistics tab in [`report/index.html`](./report/index.html)).
+Source: [`report_phase_a/statistics.json`](./report_phase_a/statistics.json) (mirror of the
+Statistics tab in [`report_phase_a/index.html`](./report_phase_a/index.html)).
 
 | Endpoint                     | Samples | Throughput (req/s) | p50 (ms) | p95 (ms) | p99 (ms) | Error % |
 |------------------------------|---------|--------------------|----------|----------|----------|---------|
@@ -87,7 +89,7 @@ Aggregated sampler view:
 |--------------------------------------|---------|--------------------|----------|----------|----------|---------|-------|
 | `POST /api/v1/emergency/recommend`   | 10,000  | 114.8              | 40       | 2,489    | 3,048    | 98.3 %  | See response-code split below |
 
-Response-code split (from `results.jtl`):
+Response-code split (from `results_phase_a.jtl`):
 
 | Code | Count | Share  | Meaning                                                                 |
 |------|-------|--------|-------------------------------------------------------------------------|
@@ -196,13 +198,18 @@ OSRM stops being re-asked the same route every reconfirmation.
 ## 8. Reproducing this run
 
 Prerequisites, commands, and interpretation are in [`README.md`](./README.md).
-The committed `results.jtl` and `report/` folder are the exact output of
-the reference run; regenerating the dashboard from the committed samples:
+The committed `results_phase_a.jtl` and `report_phase_a/` folder are the
+exact output of the reference run; regenerating the dashboard from the
+committed samples:
 
 ```bash
 cd backend/jmeter
-jmeter -g results.jtl -q baseline.properties -o report/
+jmeter -g results_phase_a.jtl -q baseline.properties -o report_phase_a/
 ```
 
-Running the full plan again produces a fresh sample set (prior outputs
-are archived under `./archive/<timestamp>/` by `run-baseline.sh`).
+Running the full plan again produces a fresh sample set at the canonical
+`results.jtl` + `report/` paths used by the runner; prior fresh outputs
+are archived under `./archive/<timestamp>/` by `run-baseline.sh`. To
+promote a fresh run to a phase reference, copy the canonical outputs to
+a phase-suffixed path (e.g. `results_phase_b.jtl` + `report_phase_b/`)
+and commit them.

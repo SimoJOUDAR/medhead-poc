@@ -193,7 +193,7 @@ Stress coverage lives outside the Maven build so a slow or flaky load run never 
 cd backend/jmeter && ./run-baseline.sh
 ```
 
-The run produces an HTML dashboard under `backend/jmeter/report/` whose per-endpoint p50 / p95 / p99 + throughput numbers are the inputs to the Phase A verdict. The filled report for the committed reference run is in [`backend/jmeter/phase_a_baseline.md`](backend/jmeter/phase_a_baseline.md); the raw samples (`results.jtl`) and dashboard (`report/index.html`) are committed alongside it so the numbers are independently verifiable.
+The run produces an HTML dashboard under `backend/jmeter/report/` whose per-endpoint p50 / p95 / p99 + throughput numbers are the inputs to the verdict callout in each phase report. Two reference runs are committed: [`backend/jmeter/phase_a_baseline.md`](backend/jmeter/phase_a_baseline.md) (uncached baseline) and [`backend/jmeter/phase_b_rerun.md`](backend/jmeter/phase_b_rerun.md) (post-cache rerun); their raw samples (`results_phase_a.jtl`, `results_phase_b.jtl`) and dashboards (`report_phase_a/`, `report_phase_b/`) are committed alongside so the numbers are independently verifiable.
 
 ### Running coverage locally
 
