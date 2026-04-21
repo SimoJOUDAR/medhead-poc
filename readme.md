@@ -72,6 +72,23 @@ docker exec -e PGPASSWORD=medhead medhead-postgres \
 
 The seed file uses `ON CONFLICT DO UPDATE` on `(hospital_id, specialty_id)` so re-application is idempotent and resets both `available_beds` and the optimistic-lock `version` column.
 
+### Building the backend image
+
+`backend/Dockerfile` is a multi-stage build: a JDK layer compiles the JAR via the Maven wrapper, and a slim JRE layer runs it as a non-root user with a `/actuator/health` healthcheck. Build the image once, then run it against the Postgres started by `docker compose up -d postgres`:
+
+```bash
+docker build -t medhead-backend:dev backend
+
+docker run --rm --name medhead-backend -p 8080:8080 \
+  --add-host=host.docker.internal:host-gateway \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/medhead \
+  -e SPRING_DATASOURCE_USERNAME=medhead \
+  -e SPRING_DATASOURCE_PASSWORD=medhead \
+  medhead-backend:dev
+```
+
+`host.docker.internal` is the Docker-host alias (built-in on Docker Desktop, declared by `--add-host` on Linux); it lets the containerised backend reach the Postgres published on the host's `5432`. Verify the boot with `curl -s localhost:8080/actuator/health` -- the response is `{"status":"UP"}` once Spring Boot has wired up the data source.
+
 ### Running OSRM locally
 
 The backend computes road distances and travel times through a local

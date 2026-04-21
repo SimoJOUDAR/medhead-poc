@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [master]
 
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -22,5 +26,156 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Run unit tests
-        run: ./mvnw -B test
+      - name: Run mvn verify (Surefire + Failsafe + Cucumber + JaCoCo aggregate)
+        run: ./mvnw -B verify
+
+      - name: Upload Surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports
+          if-no-files-found: warn
+
+      - name: Upload Failsafe reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failsafe-reports
+          path: backend/target/failsafe-reports
+          if-no-files-found: warn
+
+      - name: Upload JaCoCo aggregate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-aggregate-report
+          path: backend/target/site/jacoco-aggregate
+          if-no-files-found: warn
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17 Temurin
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Package runnable JAR
+        run: ./mvnw -B -DskipTests package
+
+      - name: Upload backend JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/medhead-poc-*.jar
+          if-no-files-found: error
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: medhead
+          POSTGRES_USER: medhead
+          POSTGRES_PASSWORD: medhead
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medhead -d medhead"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download backend JAR (traceability)
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Restore Buildx layer cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: buildx-${{ hashFiles('backend/Dockerfile', 'backend/pom.xml') }}
+          restore-keys: |
+            buildx-
+
+      - name: Build backend image
+        run: |
+          docker buildx build \
+            --load \
+            --tag medhead-backend:ci \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to   type=local,dest=/tmp/.buildx-cache-new,mode=max \
+            backend
+
+      - name: Rotate Buildx cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Boot the backend container
+        run: |
+          docker run -d \
+            --name medhead-backend \
+            --network host \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/medhead \
+            -e SPRING_DATASOURCE_USERNAME=medhead \
+            -e SPRING_DATASOURCE_PASSWORD=medhead \
+            medhead-backend:ci
+
+      - name: Wait for /actuator/health
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:8080/actuator/health \
+                 | grep -q '"status":"UP"'; then
+              echo "Backend reported UP after ${attempt}s."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend did not become healthy within 60s." >&2
+          exit 1
+
+      - name: Smoke /api/v1/specialties (JWT-authenticated)
+        run: |
+          token=$(curl --fail --silent -X POST \
+            http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"demo","password":"demo"}' | jq -r .token)
+          count=$(curl --fail --silent \
+            -H "Authorization: Bearer ${token}" \
+            http://localhost:8080/api/v1/specialties | jq 'length')
+          echo "Specialty catalogue size: ${count}"
+          test "${count}" -gt 0
+
+      - name: Dump backend container logs
+        if: always()
+        run: |
+          {
+            echo "## medhead-backend container logs"
+            echo
+            echo '```'
+            docker logs medhead-backend 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tear down backend container
+        if: always()
+        run: docker rm -f medhead-backend || true
