@@ -30,13 +30,10 @@ export function useSpecialties(): UseSpecialtiesResult {
 
   useEffect(() => {
     if (!token) {
-      setLoading(false)
       return
     }
 
     const controller = new AbortController()
-    setLoading(true)
-    setError(null)
 
     apiFetch<SpecialtyOption[]>(SPECIALTIES_URL, {
       token,

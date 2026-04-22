@@ -244,7 +244,84 @@ Import / interactive-use instructions and a note on side-effects (each successfu
 
 ## CI/CD Pipeline
 
-<!-- To be completed in session S5 -->
+Two GitHub Actions workflows gate every change to `master`. Each is split into job-level stages so a failure pinpoints the breaking step and the artefacts come out at the layer that produced them.
+
+### Stages
+
+| Stack | Pipeline |
+|-------|----------|
+| Backend (`.github/workflows/backend-ci.yml`) | `test` → `build` → `docker` |
+| Frontend (`.github/workflows/frontend-ci.yml`) | `lint` ‖ `test` → `build` |
+
+Backend `build` depends on `test`; `docker` depends on `build`. Frontend `lint` runs in parallel with `test`; `build` depends on `test`.
+
+### Per-stage breakdown
+
+**Backend**
+
+| Stage | What runs | Artefacts uploaded |
+|-------|-----------|--------------------|
+| `test` | `./mvnw -B verify` (Surefire unit + Failsafe integration + Cucumber E2E + JaCoCo aggregate). | `surefire-reports`, `failsafe-reports`, `jacoco-aggregate-report` |
+| `build` | `./mvnw -B -DskipTests package`. | `backend-jar` |
+| `docker` | Builds `backend/Dockerfile` against the JAR from `build`, boots the container against a Postgres service, asserts `/actuator/health` reports `UP` and `/api/v1/specialties` returns a non-empty list under a JWT. | (container logs streamed to the job summary) |
+
+**Frontend**
+
+| Stage | What runs | Artefacts uploaded |
+|-------|-----------|--------------------|
+| `lint` | `npm run lint` (ESLint flat config). | -- |
+| `test` | `npm run test:coverage` (Vitest + React Testing Library, v8 coverage provider). | `frontend-coverage-report` |
+| `build` | `npm run build` (TypeScript project references + Vite production build). | `frontend-dist` |
+
+Artefacts are downloadable from the workflow run page on GitHub: open the run, scroll to the **Artifacts** panel, click the artefact name. They are kept under GitHub's default retention policy.
+
+### Run the same commands locally
+
+```bash
+# Backend -- mirrors the three CI stages.
+cd backend
+./mvnw -B verify
+./mvnw -B -DskipTests package
+docker build -t medhead-backend:dev .
+
+# Frontend -- mirrors the three CI stages.
+cd frontend
+npm ci
+npm run lint
+npm run test:coverage
+npm run build
+```
+
+The container-boot smoke that the `docker` stage performs is the same flow described under [Building the backend image](#building-the-backend-image), substituting the locally-published Postgres for the workflow's service container.
+
+### Required status checks
+
+Branch protection on `master` requires the six job-level checks below. Direct pushes to `master` are rejected, force-pushes and deletion are blocked, and the branch must be up to date with `master` before merging.
+
+- `backend-ci / test`
+- `backend-ci / build`
+- `backend-ci / docker`
+- `frontend-ci / lint`
+- `frontend-ci / test`
+- `frontend-ci / build`
+
+See [Branch workflow](#branch-workflow) for the full merge contract.
+
+### Reuse the pipeline as a Solution Building Block
+
+The pipeline is self-contained -- no external SaaS scanners, no shared runner pool, no project-specific scripts outside the listed files. To port it into a sister Spring Boot + Vite codebase, copy:
+
+- `.github/workflows/backend-ci.yml`
+- `.github/workflows/frontend-ci.yml`
+- `backend/Dockerfile` and `backend/.dockerignore`
+- `frontend/package.json` script set (`lint`, `test`, `test:coverage`, `build`) and the matching `eslint.config.js` + `vite.config.ts` `test`/`coverage` blocks.
+
+Conventions to preserve when porting:
+
+- Per-job `actions/setup-node@v4` and `actions/setup-java@v4` with their built-in caches (`cache: npm`, `cache: maven`) and an explicit `cache-dependency-path` for the Node cache.
+- Concurrency groups keyed on `${{ github.ref }}` with `cancel-in-progress: true` so superseded runs of the same branch are cancelled automatically.
+- `if: always()` on every artefact upload so reports survive a failing test or build stage.
+- Job-level required status checks (not workflow-level) so a broken stage names itself in the branch-protection error.
 
 ## Branch workflow
 
@@ -259,7 +336,7 @@ The project follows **GitHub Flow**: `master` is the only long-lived branch and 
 
 Direct pushes to `master` are disabled. Every change reaches `master` through a pull request that satisfies all of the following, enforced by branch protection:
 
-- The `backend-ci` and `frontend-ci` status checks are green.
+- The six job-level status checks listed under [Required status checks](#required-status-checks) are green.
 - The branch is up to date with `master` before merging.
 - Force-pushes and deletion of `master` are rejected.
 
