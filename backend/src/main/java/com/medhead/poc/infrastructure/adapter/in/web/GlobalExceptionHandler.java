@@ -4,6 +4,7 @@ import com.medhead.poc.application.dto.ErrorResponse;
 import com.medhead.poc.domain.exception.HospitalNotFoundException;
 import com.medhead.poc.domain.exception.NoBedAvailableException;
 import com.medhead.poc.domain.exception.OptimisticLockConflictException;
+import com.medhead.poc.domain.exception.RoutingServiceUnavailableException;
 import com.medhead.poc.domain.exception.SpecialtyNotFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -37,7 +38,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Map<String, Object>> handleBadCredentials(BadCredentialsException exception) {
+    public ResponseEntity<Map<String, Object>> handleBadCredentials() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                 "timestamp", Instant.now().toString(),
                 "status", HttpStatus.UNAUTHORIZED.value(),
@@ -80,7 +81,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException exception) {
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable() {
         return error(HttpStatus.BAD_REQUEST, "MALFORMED_REQUEST",
                 "Request body is missing or malformed", null);
     }
@@ -93,14 +94,21 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(OptimisticLockConflictException.class)
-    public ResponseEntity<ErrorResponse> handleOptimisticLock(OptimisticLockConflictException exception) {
+    public ResponseEntity<ErrorResponse> handleOptimisticLock() {
         return error(HttpStatus.SERVICE_UNAVAILABLE, "RESERVATION_CONFLICT",
                 "Bed reservation could not complete after retries -- retry later",
                 null);
     }
 
+    @ExceptionHandler(RoutingServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleRoutingUnavailable() {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "ROUTING_UNAVAILABLE",
+                "Routing service is unavailable -- retry later",
+                null);
+    }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleUnexpected(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleUnexpected() {
         return error(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
                 "An unexpected error occurred", null);
     }
