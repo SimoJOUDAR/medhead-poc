@@ -6,9 +6,9 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Quick Start](#quick-start)
 - [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
 - [Running the Application](#running-the-application)
 - [Running the Tests](#running-the-tests)
 - [CI/CD Pipeline](#cicd-pipeline)
@@ -19,115 +19,68 @@
 
 ## Overview
 
-<!-- To be completed in sessions S2-S5 -->
+A real-time emergency hospital allocation service for the MedHead Consortium. Given a patient location and a required medical specialty, the API recommends the nearest hospital that has an available bed in that specialty, atomically reserves the bed, and publishes a bed-reservation event. A small React UI consumes the API for demos and manual exercising.
+
+The PoC sits at Layer 2 of the consortium's target architecture (real-time, fault-tolerant, patient-safety critical). It addresses the five risks tracked against the emergency response system: scaling under load, partner-data latency, fallback when the requested specialty is unavailable, sub-200 ms response under load, and external interfaceability via OpenAPI.
+
+## Quick Start
+
+From clone to a running stack (see [Prerequisites](#prerequisites); OSRM needs a [one-off graph preparation](backend/README.md#running-osrm-locally) first):
+
+```bash
+git clone <repository-url> && cd medhead-poc
+
+# 1. State + routing (Postgres seeds itself on first backend boot).
+#    Set OSRM_GRAPH to the graph you prepared, e.g. the Greater London one:
+OSRM_GRAPH=greater-london-latest.osrm docker compose up -d postgres osrm
+
+# 2. Backend on :8080.
+cd backend && ./mvnw spring-boot:run
+
+# 3. (separate terminal) Frontend on :5173.
+cd frontend && npm ci && npm run dev
+```
+
+Open `http://localhost:5173` and log in with `demo` / `demo`, and enter lat+long (eg. latitude `51.523`, longitude `-0.131`). Run the test pyramids with `./mvnw -B verify` (from `backend/`) and `npm test` (from `frontend/`) — neither needs the compose stack running: Testcontainers spins up its own disposable Postgres (Docker daemon required) and WireMock stubs OSRM.
 
 ## Architecture
 
-<!-- To be completed in sessions S2-S5 -->
+**Hexagonal (ports and adapters).** A framework-free `domain` layer (entities, value objects, ports as interfaces, domain exceptions) is wrapped by an `application` layer (use-case services, DTOs) and an `infrastructure` layer that holds every adapter — Spring MVC controllers, JPA repositories, the OSRM HTTP client, the Spring `ApplicationEvent` publisher, and the Spring Security configuration. Ports are owned by the domain; adapters depend inwards. Swapping Postgres for another store, or `ApplicationEvent` for Kafka, is a one-bean change.
+
+| Layer | Role | Spring annotations |
+|---|---|---|
+| Domain | Entities, ports, business rules | None |
+| Application | Use-case orchestration, transaction boundaries, DTO mapping | `@Service`, `@Transactional` |
+| Infrastructure | REST controllers, JPA repositories, OSRM client, event publisher, security config | `@RestController`, `@Repository`, `@Component`, `@Configuration` |
+
+Justifications and trade-offs are spelled out in [`reporting.md`](https://github.com/SimoJOUDAR/medhead-poc-architecture/blob/master/reporting.md) §1, published in the [architecture repository](https://github.com/SimoJOUDAR/medhead-poc-architecture).
 
 ## Prerequisites
 
-<!-- To be completed in session S2 -->
+| Tool | Version | Used by |
+|---|---|---|
+| JDK (Temurin recommended) | 17 LTS | Backend build / run |
+| Maven Wrapper | bundled (`backend/mvnw`) | Backend build / test |
+| Node.js | ≥ 20 | Frontend build / test |
+| npm | bundled with Node 20 | Frontend dependencies |
+| Docker (with Compose v2) | recent | Postgres + OSRM + container-image runs |
+| `curl` + `jq` | optional | End-to-end walkthrough below |
 
-## Getting Started
-
-<!-- To be completed in session S2 -->
+JMeter 5.6+ is only required to rerun the stress harness; see [`backend/jmeter/README.md`](backend/jmeter/README.md).
 
 ## Running the Application
 
-<!-- To be completed in session S2 -->
+The full local stack is three processes: Postgres (state), OSRM (road-distance routing), and the Spring Boot backend. The React frontend optionally runs in dev mode on top. The boot sequence is the [Quick Start](#quick-start) above.
 
-### Running PostgreSQL via Docker Compose
+The backend listens on `http://localhost:8080`, the frontend on `http://localhost:5173` (Vite proxies `/api/*` to the backend so CORS stays out of the development loop). Health probe: `curl -s localhost:8080/actuator/health` should return `{"status":"UP"}`. The full stack-up walkthrough — including the canonical `§2.6` cardiology scenario — is documented under [End-to-end walkthrough](#end-to-end-walkthrough-the-main-recommendation-scenario) below.
 
-The backend targets PostgreSQL 16 for local runs; integration tests spin up their own Testcontainers instance and are independent of the compose stack. The `docker-compose.yml` at the repo root declares a single `postgres` service (image `postgres:16-alpine`, published on `localhost:5432`, database `medhead`, user/password `medhead`/`medhead`).
+### Backing services and container image
 
-```bash
-# Start Postgres in the background.
-docker compose up -d postgres
+Operational detail lives in [`backend/README.md`](backend/README.md):
 
-# Verify health.
-docker compose ps postgres
-
-# Tail logs if something's off.
-docker compose logs -f postgres
-
-# Stop without losing data.
-docker compose stop postgres
-
-# Stop and wipe the volume (rare -- resets the seed on next boot).
-docker compose down -v
-```
-
-On first boot the backend runs `backend/src/main/resources/schema.sql` and `data.sql` automatically through Spring's datasource initializer. The schema creates four tables (`specialty_groups`, `specialties`, `hospitals`, `hospital_specialties`) plus a partial index on available beds and a lat/long index. The seed installs the 12 NHS specialty groups, 80 specialties, 12 fictional UK hospitals, and the §2.6 fixture (Fred Brooks cardiology=2/immunology=3, Julia Crusher cardiology=0, Beverly Bashir immunology=5/Diagnostic neuropathology=4/Clinical radiology=2).
-
-Override connection details via `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD`. Tests never hit the compose container -- they use a disposable Testcontainers instance bound through `@ServiceConnection`.
-
-To restore the seed without wiping the volume (e.g. after a scenario has zeroed bed counts):
-
-```bash
-docker cp backend/src/main/resources/data.sql medhead-postgres:/tmp/data.sql
-docker exec -e PGPASSWORD=medhead medhead-postgres \
-  psql -U medhead -d medhead -f /tmp/data.sql
-```
-
-The seed file uses `ON CONFLICT DO UPDATE` on `(hospital_id, specialty_id)` so re-application is idempotent and resets both `available_beds` and the optimistic-lock `version` column.
-
-### Building the backend image
-
-`backend/Dockerfile` is a multi-stage build: a JDK layer compiles the JAR via the Maven wrapper, and a slim JRE layer runs it as a non-root user with a `/actuator/health` healthcheck. Build the image once, then run it against the Postgres started by `docker compose up -d postgres`:
-
-```bash
-docker build -t medhead-backend:dev backend
-
-docker run --rm --name medhead-backend -p 8080:8080 \
-  --add-host=host.docker.internal:host-gateway \
-  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/medhead \
-  -e SPRING_DATASOURCE_USERNAME=medhead \
-  -e SPRING_DATASOURCE_PASSWORD=medhead \
-  medhead-backend:dev
-```
-
-`host.docker.internal` is the Docker-host alias (built-in on Docker Desktop, declared by `--add-host` on Linux); it lets the containerised backend reach the Postgres published on the host's `5432`. Verify the boot with `curl -s localhost:8080/actuator/health` -- the response is `{"status":"UP"}` once Spring Boot has wired up the data source.
-
-### Running OSRM locally
-
-The backend computes road distances and travel times through a local
-[Open Source Routing Machine](https://project-osrm.org/) container. Integration
-and acceptance tests replace the adapter with a deterministic stub, so OSRM is
-**not required for `./mvnw -B verify`**; it is only needed when exercising
-`POST /api/v1/emergency/recommend` against a running backend.
-
-Point the backend at a non-default host or port via `APP_OSRM_HOST`,
-`APP_OSRM_PORT`, and `APP_OSRM_READ_TIMEOUT_MS`. The defaults target the
-service declared in `docker-compose.yml` (`localhost:5000`).
-
-OSRM needs a pre-processed `.osrm` graph on disk before `docker compose up`
-can start it. The full Great Britain extract (~700 MB PBF, several GB of
-processed artefacts) works, but a smaller region like Greater London is more
-than sufficient for the seeded fixtures -- all 12 hospitals are inside
-England. Map-data lives under `osrm-data/` and is gitignored.
-
-```bash
-# 1. Download a region extract from Geofabrik (Greater London ≈ 80 MB).
-mkdir -p osrm-data
-curl -L -o osrm-data/greater-london-latest.osm.pbf \
-  https://download.geofabrik.de/europe/united-kingdom/england/greater-london-latest.osm.pbf
-
-# 2. Extract / partition / customize (one-off).
-docker run --rm -t -v "$PWD/osrm-data:/data" osrm/osrm-backend \
-  osrm-extract -p /opt/car.lua /data/greater-london-latest.osm.pbf
-docker run --rm -t -v "$PWD/osrm-data:/data" osrm/osrm-backend \
-  osrm-partition /data/greater-london-latest.osrm
-docker run --rm -t -v "$PWD/osrm-data:/data" osrm/osrm-backend \
-  osrm-customize /data/greater-london-latest.osrm
-
-# 3. Start the service, pointing at the produced graph.
-OSRM_GRAPH=greater-london-latest.osrm docker compose up -d osrm
-```
-
-Confirm the server is up with
-`curl "http://localhost:5000/route/v1/driving/-0.131,51.523;-0.130,51.523?overview=false"`;
-expect a JSON payload with a `routes[0].distance` field in metres.
+- **PostgreSQL** — the `postgres` compose service (`postgres:16-alpine` on `localhost:5432`). On first boot the backend applies `schema.sql` + `data.sql` automatically (12 NHS specialty groups, 80 specialties, 12 fictional UK hospitals, the §2.6 fixture). Ops recipes (logs, stop, volume wipe, [idempotent seed restore](backend/README.md#restoring-the-seed)) in [`backend/README.md`](backend/README.md#running-postgresql-via-docker-compose).
+- **OSRM** — road-distance routing. Not required for `./mvnw -B verify` (tests stub the adapter); needed only to exercise `POST /api/v1/emergency/recommend` live. Requires a one-off graph preparation before `docker compose up -d osrm` — see [`backend/README.md`](backend/README.md#running-osrm-locally).
+- **Backend container image** — the multi-stage `backend/Dockerfile` (same build the CI `docker` stage smoke-tests): build + run instructions in [`backend/README.md`](backend/README.md#building-the-backend-image).
 
 ### Local dev credentials
 
@@ -196,11 +149,27 @@ Two side-effects should be observable:
 - The backend log shows `[BED_RESERVATION] hospitalId=1 hospital="Fred Brooks Hospital" specialtyId=<...> specialty="Cardiology" remainingBeds=1` -- the Spring `ApplicationEvent` emitted by the reservation flow.
 - Re-running the psql query from step 4 returns `1` -- the bed has been decremented atomically under optimistic locking.
 
-Restore the seed with the `docker cp` + `psql -f` recipe from the [Running PostgreSQL](#running-postgresql-via-docker-compose) section when you're done experimenting.
+Restore the seed with the [idempotent `docker cp` + `psql -f` recipe](backend/README.md#restoring-the-seed) when you're done experimenting.
 
 ## Running the Tests
 
-<!-- To be completed in session S4 -->
+The test pyramid is reproducible from a clean checkout. Backend uses JUnit 5 + Mockito (unit), Spring Boot Test + Testcontainers + WireMock (integration), and Cucumber + REST Assured (BDD acceptance). Frontend uses Vitest + React Testing Library, plus `jest-axe` for WCAG 2.1 AA.
+
+```bash
+# Backend -- unit + integration + Cucumber + JaCoCo aggregate report.
+cd backend && ./mvnw -B verify
+# Reports: target/surefire-reports/, target/failsafe-reports/,
+#          target/site/jacoco-aggregate/index.html
+
+# Frontend -- Vitest + RTL + jest-axe.
+cd frontend && npm test
+# Coverage variant -- HTML report at frontend/coverage/index.html
+cd frontend && npm run test:coverage
+```
+
+`./mvnw -B verify` brings up its own disposable Postgres through Testcontainers, so it does **not** need the compose stack running. It also does not need OSRM — the integration tests stub the routing adapter via WireMock.
+
+The detailed pyramid layout, coverage numbers, and Cucumber feature inventory are in [`reporting.md`](https://github.com/SimoJOUDAR/medhead-poc-architecture/blob/master/reporting.md) §4.2 (architecture repository).
 
 ### Non-functional tests
 
@@ -228,7 +197,7 @@ The backend aggregate run is the one wired into `./mvnw -B verify`; no extra fla
 
 ### API tooling (Postman)
 
-The full S5 API surface is exercised by a Newman-runnable Postman collection under [`postman/`](postman/README.md): JWT login (with a token-stash test script populating the `{{token}}` environment variable), the specialty and hospital catalogues, single hospital lookup, and the emergency recommendation endpoint on both the §2.6 main scenario and the fallback path. Every request carries `pm.test` assertions on its status code and at least one shape field so the collection doubles as a self-checking smoke test.
+The full API surface is exercised by a Newman-runnable Postman collection under [`postman/`](postman/README.md): JWT login (with a token-stash test script populating the `{{token}}` environment variable), the specialty and hospital catalogues, single hospital lookup, and the emergency recommendation endpoint on both the §2.6 main scenario and the fallback path. Every request carries `pm.test` assertions on its status code and at least one shape field so the collection doubles as a self-checking smoke test.
 
 ```bash
 # Boot the stack first.
@@ -292,7 +261,7 @@ npm run test:coverage
 npm run build
 ```
 
-The container-boot smoke that the `docker` stage performs is the same flow described under [Building the backend image](#building-the-backend-image), substituting the locally-published Postgres for the workflow's service container.
+The container-boot smoke that the `docker` stage performs is the same flow described under [Building the backend image](backend/README.md#building-the-backend-image), substituting the locally-published Postgres for the workflow's service container.
 
 ### Required status checks
 
@@ -363,8 +332,53 @@ Run through the following before any demo; the steps passed on the last audit.
 
 ## API Documentation
 
-<!-- To be completed in session S2 -->
+The API contract is generated from the running backend by Springdoc and exposed two ways:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /v3/api-docs` | OpenAPI 3 JSON spec (machine-readable). |
+| `GET /swagger-ui.html` | Browsable Swagger UI (use this to try requests interactively). |
+
+Both endpoints are unauthenticated; the rest of `/api/v1/**` requires a JWT obtained from `POST /api/v1/auth/login` (see [Local dev credentials](#local-dev-credentials)).
+
+The full set of public endpoints is also distributed as a Newman-runnable Postman collection under [`postman/`](postman/README.md), with `pm.test` assertions on each request — useful as a copy-customise SBB for sister teams.
+
+The four routes the PoC implements:
+
+| Method | Path | Authenticated | Purpose |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/login` | no | Exchange `{username, password}` for a 60-min HS256 JWT. |
+| `GET` | `/api/v1/specialties` | yes | List the 80 NHS specialties with their parent group. |
+| `GET` | `/api/v1/hospitals` (and `/{id}`) | yes | List hospitals + per-specialty bed availability. |
+| `POST` | `/api/v1/emergency/recommend` | yes | Recommend the nearest hospital with an available bed in the requested specialty (the §2.6 main scenario), reserve the bed, publish the bed-reservation event. |
 
 ## Project Structure
 
-<!-- To be completed in session S2 -->
+```
+medhead-poc/
+├── backend/                       # Spring Boot (Java 17, Maven)
+│   ├── src/main/java/com/medhead/poc/
+│   │   ├── domain/                # Pure domain (no Spring): models, ports, exceptions
+│   │   ├── application/           # Use-case services + DTOs
+│   │   └── infrastructure/        # Adapters: web, persistence, routing, event, security
+│   ├── src/main/resources/        # application.yaml, schema.sql, data.sql
+│   ├── src/test/java/...          # Unit + integration + Cucumber suites
+│   ├── src/test/resources/features/   # Gherkin acceptance scenarios
+│   ├── jmeter/                    # Stress harness, baseline JMX, Phase A + B reports
+│   ├── pom.xml
+│   ├── Dockerfile                 # Multi-stage, slim JRE final layer, non-root
+│   └── README.md                  # Backend ops: Postgres recipes, image build, OSRM setup
+├── frontend/                      # React 19 + TypeScript + Vite
+│   ├── src/auth/                  # JWT login, persistence, typed apiClient
+│   ├── src/recommend/             # Recommendation form + result card
+│   ├── src/__tests__/             # WCAG 2.1 AA via jest-axe
+│   ├── package.json               # lint / test / test:coverage / build scripts
+│   ├── vite.config.ts             # Dev-proxy to /api + Vitest config
+│   └── README.md                  # Frontend scripts, layout, proxy note
+├── postman/                       # Newman-runnable collection + environment
+├── .github/workflows/             # backend-ci.yml + frontend-ci.yml
+├── docker-compose.yml             # postgres:16-alpine + osrm/osrm-backend
+└── readme.md
+```
+
+The architecture-committee deliverable (`reporting.md`) and the TOGAF architecture documents live in the companion [architecture repository](https://github.com/SimoJOUDAR/medhead-poc-architecture).

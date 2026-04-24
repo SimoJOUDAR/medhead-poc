@@ -24,7 +24,7 @@ services:
     volumes:
       - ./osrm-data:/data
     # The .osrm file under osrm-data/ is produced by the local extract/partition/customize
-    # recipe in the readme (see "Running OSRM locally"). Override the filename via
+    # recipe in backend/README.md (see "Running OSRM locally"). Override the filename via
     # OSRM_GRAPH if you pre-processed a region other than great-britain.
     command: osrm-routed --algorithm mld /data/${OSRM_GRAPH:-great-britain-latest.osrm}
 

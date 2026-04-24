@@ -20,7 +20,7 @@ docker compose up -d postgres osrm
 cd backend && ./mvnw spring-boot:run
 ```
 
-The seeded `demo` / `demo` credentials and the §2.6 fixture (Fred Brooks Hospital, cardiology specialty `id=21`) are documented in the project root's [`readme.md`](../readme.md). The fallback request targets specialty `id=60` (Dental public health), which has no rows in `hospital_specialties` so the recommendation widens to the nearest hospital with any bed.
+The seeded `demo` / `demo` credentials are documented in the project root's [`readme.md`](../readme.md); the §2.6 fixture (Fred Brooks Hospital, cardiology specialty `id=21`) is detailed in [`backend/README.md`](../backend/README.md#running-postgresql-via-docker-compose). The fallback request targets specialty `id=60` (Dental public health), which has no rows in `hospital_specialties` so the recommendation widens to the nearest hospital with any bed.
 
 ## Running interactively in Postman Desktop
 
@@ -57,4 +57,4 @@ CI integration of `newman run` (alongside the rest of the test pipeline) is deli
 
 ## Side-effects to be aware of
 
-The main-scenario recommendation request reserves a cardiology bed at Fred Brooks Hospital, decrementing its `available_beds` by one on every successful call (seed value `2`). The fallback request likewise reserves a bed at whichever hospital ends up nearest. After three or four runs the seed will need restoring -- see the readme's `docker cp` + `psql -f` recipe, or the `docker compose down -v` reset above.
+The main-scenario recommendation request reserves a cardiology bed at Fred Brooks Hospital, decrementing its `available_beds` by one on every successful call (seed value `2`). The fallback request likewise reserves a bed at whichever hospital ends up nearest. After three or four runs the seed will need restoring -- see the [`docker cp` + `psql -f` recipe in `backend/README.md`](../backend/README.md#restoring-the-seed), or the `docker compose down -v` reset above.

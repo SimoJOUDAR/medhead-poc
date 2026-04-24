@@ -1,73 +1,25 @@
-# React + TypeScript + Vite
+# MedHead PoC — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript (strict) + Vite module of the MedHead PoC. A single-page UI over the emergency recommendation API: JWT login, specialty selection, patient location input, and the recommendation result card. Project context, quick start, and the CI pipeline are documented in the [root `readme.md`](../readme.md).
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm ci                 # install dependencies
+npm run dev            # dev server on http://localhost:5173
+npm run lint           # ESLint (flat config, react-hooks rules)
+npm test               # Vitest + React Testing Library + jest-axe
+npm run test:watch     # same, in watch mode
+npm run test:coverage  # same, with v8 coverage report at coverage/index.html
+npm run build          # type-check + production bundle in dist/
+npm run preview        # serve the production bundle locally
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The dev server proxies `/api/*` to the backend on `http://localhost:8080` (see `vite.config.ts`), so no CORS configuration is needed in development. Boot the backend first — see the [root Quick Start](../readme.md#quick-start).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Layout
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `src/auth/` — JWT login flow, `sessionStorage` persistence, typed `apiClient` + `ApiError`.
+- `src/recommend/` — recommendation form, specialty dropdown, location inputs, result card, error mapping.
+- `src/__tests__/` — WCAG 2.1 AA accessibility specs (jest-axe); see the [Accessibility section](../readme.md#accessibility) of the root readme.

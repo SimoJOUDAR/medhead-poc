@@ -59,8 +59,9 @@ Any 42.7.x build matches the `postgres:16-alpine` image declared in
 Before launching the run:
 
 - `docker compose up -d postgres osrm` from the repo root.
-- OSRM graph pre-processed per the repo-root `readme.md` "Running OSRM
-  locally" section. The recommendation endpoint falls over without it.
+- OSRM graph pre-processed per the ["Running OSRM locally" section of
+  `backend/README.md`](../README.md#running-osrm-locally). The recommendation
+  endpoint falls over without it.
 - Backend started in a separate terminal: `cd backend && ./mvnw spring-boot:run`.
   Confirm `curl http://localhost:8080/actuator/health` returns `{"status":"UP"}`.
 - Dev credentials `demo` / `demo` must still be the active user (see
